@@ -63,6 +63,21 @@ class Tickets(models.Model):
         db_table = 'tickets'
 
 
+class Payments(models.Model):
+    payment_id = models.AutoField(primary_key=True)
+    booking = models.ForeignKey('Bookings', models.DO_NOTHING)
+    stripe_session_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_payment_intent = models.CharField(max_length=255, blank=True, null=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='cad')
+    status = models.CharField(max_length=20, default='pending')  # pending | paid | failed
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = True
+        db_table = 'payments'
+
+
 class UpcomingEvents(models.Model):
     event_id = models.AutoField(primary_key=True)
     event_name = models.CharField(max_length=255)
@@ -83,12 +98,12 @@ class Users(models.Model):
     surname = models.CharField(max_length=127)
     forename = models.CharField(max_length=127)
     email = models.CharField(max_length=255, unique=True)
-    pass_field = models.CharField(max_length=255)
+    pass_field = models.CharField(max_length=255, db_column='pass')
     verified = models.BooleanField(default=False)
     verification_code = models.CharField(max_length=6, blank=True, null=True)
     address = models.CharField(max_length=1000, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    role = models.ForeignKey('Roles', models.DO_NOTHING)
+    role = models.ForeignKey('Roles', models.DO_NOTHING, db_column='role')
 
     class Meta:
         managed = True
