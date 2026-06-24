@@ -3,9 +3,20 @@
 .env.local
 .env.*.local
 
-# Dependencies
-node_modules/
+# Python / Django
+__pycache__/
+*.pyc
+venv/
+*.sqlite3
 
+# settings.py holds secrets (db password, email creds) and is kept local per dev
+backend/authentication/myproject/settings.py
+
+# temp urls used to test event booking, only needed locally.
+backend/authentication/myproject/temp_urls.py
+# Dependencies
+
+node_modules/
 # Build outputs
 .next/
 dist/
