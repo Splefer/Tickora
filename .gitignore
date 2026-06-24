@@ -3,6 +3,12 @@
 .env.local
 .env.*.local
 
+# Python / Django
+__pycache__/
+*.pyc
+# settings.py holds secrets (db password, email creds) and is kept local per dev
+backend/authentication/myproject/settings.py
+
 # Dependencies
 node_modules/
 
