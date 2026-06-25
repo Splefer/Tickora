@@ -70,9 +70,9 @@ export default function Navbar() {
                   className="flex items-center gap-2 rounded-full bg-gray-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700"
                 >
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold uppercase">
-                    {user.forename[0]}
+                    {(user.forename?.[0] ?? user.email?.[0] ?? '?').toUpperCase()}
                   </span>
-                  {user.forename}
+                  {user.forename ?? user.email ?? 'User'}
                   <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
