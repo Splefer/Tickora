@@ -1,15 +1,24 @@
-import json
-
 import stripe
 from django.conf import settings
+from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 
-from .backend import get_loggedin_user
+from .backend import (
+    register,
+    verify,
+    authenticate_user,
+    login_user,
+    logout_user,
+    get_loggedin_user,
+)
 from . import payments
 from .payments import PaymentError
 
+
+# ── Stripe payment views ───────────────────────────────────────────────────────
 
 @csrf_exempt
 @require_POST
@@ -19,6 +28,7 @@ def create_checkout_session_view(request):
     Body: {"event_id": int, "tickets": [{"type_id": int, "quantity": int}, ...]}
     Returns: {"url", "session_id", "booking_id"}
     """
+    import json
     user = get_loggedin_user(request)
     if user is None:
         return JsonResponse({"error": "Not logged in."}, status=401)
@@ -55,11 +65,7 @@ def create_checkout_session_view(request):
 
 @require_GET
 def verify_payment_view(request):
-    """GET /api/payments/verify/?session_id=cs_test_...
-
-    Called by the frontend on the success page. Confirms the booking if paid.
-    Returns: {"status", "booking_id"}
-    """
+    """GET /api/payments/verify/?session_id=cs_test_..."""
     session_id = request.GET.get("session_id")
     if not session_id:
         return JsonResponse({"error": "session_id is required."}, status=400)
@@ -77,12 +83,7 @@ def verify_payment_view(request):
 @csrf_exempt
 @require_POST
 def stripe_webhook_view(request):
-    """POST /api/payments/webhook/
-
-    Stripe calls this directly. Verifies the signature and confirms the
-    booking on checkout.session.completed. Optional but more reliable than
-    relying on the browser redirect.
-    """
+    """POST /api/payments/webhook/"""
     payload = request.body
     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
 
@@ -101,3 +102,56 @@ def stripe_webhook_view(request):
             pass
 
     return HttpResponse(status=200)
+
+
+# ── HTML template views ────────────────────────────────────────────────────────
+
+def register_view(request):
+    if request.method == "POST":
+        success, result = register(request.POST)
+        if success:
+            request.session["verify_email"] = result.email
+            messages.success(request, "Registration successful. Please check your email for the verification code.")
+            return redirect("verify")
+        for error in result:
+            messages.error(request, error)
+    return render(request, "authapp/register.html")
+
+
+def verify_view(request):
+    email = request.session.get("verify_email")
+    if request.method == "POST":
+        code = request.POST.get("verification_code")
+        success, message = verify(email, code)
+        if success:
+            messages.success(request, message)
+            request.session.pop("verify_email", None)
+            return redirect("login")
+        messages.error(request, message)
+    return render(request, "authapp/verify.html", {"email": email})
+
+
+def login_view(request):
+    if request.method == "POST":
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        success, result = authenticate_user(email, password)
+        if success:
+            login_user(request, result)
+            messages.success(request, "Logged in successfully.")
+            return redirect("home")
+        messages.error(request, result)
+    return render(request, "authapp/login.html")
+
+
+def logout_view(request):
+    logout_user(request)
+    messages.success(request, "Logged out successfully.")
+    return redirect("login")
+
+
+def home_view(request):
+    user = get_loggedin_user(request)
+    if user is None:
+        return redirect("login")
+    return render(request, "authapp/home.html", {"user": user})

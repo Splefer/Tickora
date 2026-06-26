@@ -18,7 +18,11 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('authapp/', include('django.contrib.auth.urls')),
-    path('api/payments/', include('authapp.urls')),
+    path("admin/", admin.site.urls),
+    # JSON API — auth (Next.js frontend)
+    path("api/auth/", include("authapp.api_urls")),
+    # JSON API — payments (Stripe)
+    path("api/payments/", include("authapp.payment_urls")),
+    # HTML template routes
+    path("authapp/", include("authapp.urls")),
 ]
