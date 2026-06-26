@@ -8,6 +8,10 @@ __pycache__/
 *.pyc
 # settings.py holds secrets (db password, email creds) and is kept local per dev
 backend/authentication/myproject/settings.py
+# Stripe local test scripts and artifacts
+backend/authentication/test_stripe.py
+backend/authentication/verify_stripe.py
+backend/authentication/.last_session_id
 
 # Dependencies
 node_modules/
