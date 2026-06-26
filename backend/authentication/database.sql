@@ -85,6 +85,18 @@ CREATE TABLE tickets (
     FOREIGN KEY (type_id) REFERENCES ticket_types(type_id)  ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 
+CREATE TABLE payments (
+	payment_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    stripe_session_id VARCHAR(255) DEFAULT NULL,
+    stripe_payment_intent VARCHAR(255) DEFAULT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'cad',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',  -- pending | paid | failed
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+);
+
 INSERT INTO roles (role_name) VALUES
     ('customer'),
     ('manager'),
