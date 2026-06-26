@@ -16,6 +16,8 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
+const sessionBookings: Booking[] = [];
+
 async function request<T>(path: string, options?: RequestInit, token?: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -31,21 +33,48 @@ async function request<T>(path: string, options?: RequestInit, token?: string): 
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
+const DEMO_USERS: Record<string, { password: string; user_id: number; forename: string; surname: string; role: string; token: string }> = {
+  'customer@demo.com': {
+    password: 'demo1234',
+    user_id: 1,
+    forename: 'Alex',
+    surname: 'Thompson',
+    role: 'customer',
+    token: 'mock-token-customer',
+  },
+  'organizer@demo.com': {
+    password: 'demo1234',
+    user_id: 2,
+    forename: 'Des',
+    surname: 'Ryan',
+    role: 'organizer',
+    token: 'mock-token-organizer',
+  },
+  'performer@demo.com': {
+    password: 'demo1234',
+    user_id: 3,
+    forename: 'Jamie',
+    surname: 'Doe',
+    role: 'performer',
+    token: 'mock-token-performer',
+  },
+};
+
 export async function login(creds: LoginCredentials): Promise<AuthResponse> {
-  // TODO: return request<AuthResponse>('/api/auth/login/', { method: 'POST', body: JSON.stringify(creds) });
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      if (creds.email && creds.password.length >= 6) {
+      const demo = DEMO_USERS[creds.email.toLowerCase().trim()];
+      if (demo && creds.password === demo.password) {
         resolve({
-          token: 'mock-token-abc123',
+          token: demo.token,
           user: {
-            user_id: 1,
-            forename: 'Alex',
-            surname: 'Thompson',
+            user_id: demo.user_id,
+            forename: demo.forename,
+            surname: demo.surname,
             email: creds.email,
             verified: true,
             created_at: new Date().toISOString(),
-            role: 'customer',
+            role: demo.role,
           },
         });
       } else {
@@ -58,21 +87,22 @@ export async function login(creds: LoginCredentials): Promise<AuthResponse> {
 export async function loginAsOrganizer(creds: LoginCredentials): Promise<AuthResponse> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      if (creds.email && creds.password.length >= 6) {
+      const demo = DEMO_USERS[creds.email.toLowerCase().trim()];
+      if (demo && creds.password === demo.password && demo.role === 'organizer') {
         resolve({
-          token: 'mock-token-org456',
+          token: demo.token,
           user: {
-            user_id: 2,
-            forename: 'Jordan',
-            surname: 'Lee',
+            user_id: demo.user_id,
+            forename: demo.forename,
+            surname: demo.surname,
             email: creds.email,
             verified: true,
             created_at: new Date().toISOString(),
-            role: 'organizer',
+            role: demo.role,
           },
         });
       } else {
-        reject(new Error('Invalid email or password'));
+        reject(new Error('Invalid organizer credentials'));
       }
     }, 600);
   });
@@ -136,25 +166,41 @@ export async function getEvent(id: number): Promise<Event | undefined> {
 
 export async function getMyBookings(_token: string): Promise<Booking[]> {
   // TODO: return request<Booking[]>('/api/bookings/', undefined, token);
-  return new Promise((resolve) => setTimeout(() => resolve(mockBookings), 300));
+  return new Promise((resolve) => setTimeout(() => resolve([...mockBookings, ...sessionBookings]), 300));
 }
 
 export async function createBooking(
   _token: string,
   eventId: number,
-  _tickets: { type_id: number; quantity: number }[],
+  tickets: { type_id: number; quantity: number }[],
 ): Promise<Booking> {
   // TODO: return request<Booking>('/api/bookings/', { method: 'POST', body: JSON.stringify({ event_id: eventId, tickets }) }, token);
   return new Promise((resolve) => {
     setTimeout(() => {
       const event = mockEvents.find((e) => e.event_id === eventId)!;
-      resolve({
-        booking_id: Math.floor(Math.random() * 9000) + 1000,
+      const bookingId = Math.floor(Math.random() * 9000) + 1000;
+
+      let seatNum = 1;
+      const ticketItems = tickets.flatMap(({ type_id, quantity }) => {
+        const ticketType = event.ticket_types?.find((tt) => tt.type_id === type_id);
+        if (!ticketType) return [];
+        return Array.from({ length: quantity }, () => ({
+          seat_id: `T${bookingId}${String(seatNum++).padStart(2, '0')}`,
+          type: ticketType,
+        }));
+      });
+
+      const booking: Booking = {
+        booking_id: bookingId,
         requested_at: new Date().toISOString(),
         confirmed: 1,
         user_id: 1,
         event,
-      });
+        tickets: ticketItems,
+      };
+
+      sessionBookings.push(booking);
+      resolve(booking);
     }, 700);
   });
 }
