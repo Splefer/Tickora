@@ -23,8 +23,8 @@ export default function RegisterPage() {
     try {
       await register({
         // Temporary default values until the wireframe/backend requirements are finalized.
-        forename: 'Test',
-        surname: 'User',
+        forename: 'John',
+        surname: 'Smith',
         email,
         password,
         role: 'customer' as Role,

@@ -2,6 +2,7 @@ import type {
   AuthResponse,
   LoginCredentials,
   RegisterData,
+  User,
   Event,
   Booking,
   OrganizerReport,
@@ -29,30 +30,71 @@ async function request<T>(path: string, options?: RequestInit, token?: string): 
   return res.json() as Promise<T>;
 }
 
+function getApiErrorMessage(data: unknown, fallback: string): string {
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'errors' in data &&
+    Array.isArray((data as { errors?: unknown }).errors)
+  ) {
+    return (data as { errors: string[] }).errors.join(' ');
+  }
+
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'message' in data &&
+    typeof (data as { message?: unknown }).message === 'string'
+  ) {
+    return (data as { message: string }).message;
+  }
+
+  return fallback;
+}
+
+function normalizeUser(rawUser: any): User {
+  return {
+    user_id: rawUser.user_id ?? rawUser.id ?? 0,
+    forename: rawUser.forename ?? '',
+    surname: rawUser.surname ?? '',
+    email: rawUser.email ?? '',
+    verified: rawUser.verified ?? false,
+    created_at: rawUser.created_at ?? new Date().toISOString(),
+    role: rawUser.role ?? 'customer',
+  };
+}
+
+function normalizeAuthResponse(data: any): AuthResponse {
+  return {
+    // Django session auth may not return a real token.
+    // This placeholder keeps the current AuthContext working for now.
+    token: data.token ?? 'django-session',
+    user: normalizeUser(data.user),
+  };
+}
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export async function login(creds: LoginCredentials): Promise<AuthResponse> {
-  // TODO: return request<AuthResponse>('/api/auth/login/', { method: 'POST', body: JSON.stringify(creds) });
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (creds.email && creds.password.length >= 6) {
-        resolve({
-          token: 'mock-token-abc123',
-          user: {
-            user_id: 1,
-            forename: 'Alex',
-            surname: 'Thompson',
-            email: creds.email,
-            verified: true,
-            created_at: new Date().toISOString(),
-            role: 'customer',
-          },
-        });
-      } else {
-        reject(new Error('Invalid email or password'));
-      }
-    }, 600);
+  // SWAPPED: mock Promise auth → real Django fetch call
+  const res = await fetch(`${API_URL}/api/auth/login/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      email: creds.email,
+      password: creds.password,
+    }),
   });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(getApiErrorMessage(data, 'Login failed'));
+  }
+
+  return normalizeAuthResponse(data);
 }
 
 export async function loginAsOrganizer(creds: LoginCredentials): Promise<AuthResponse> {
@@ -79,23 +121,31 @@ export async function loginAsOrganizer(creds: LoginCredentials): Promise<AuthRes
 }
 
 export async function register(data: RegisterData): Promise<AuthResponse> {
-  // TODO: return request<AuthResponse>('/api/auth/register/', { method: 'POST', body: JSON.stringify(data) });
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        token: 'mock-token-new789',
-        user: {
-          user_id: 99,
-          forename: data.forename,
-          surname: data.surname,
-          email: data.email,
-          verified: false,
-          created_at: new Date().toISOString(),
-          role: data.role,
-        },
-      });
-    }, 600);
+  // SWAPPED: mock Promise auth → real Django fetch call
+  const res = await fetch(`${API_URL}/api/auth/register/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      forename: data.forename,
+      surname: data.surname,
+      email: data.email,
+      role: data.role,
+
+      // Backend register validator expects pass_field, not password
+      pass_field: data.password,
+    }),
   });
+
+  const result = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(getApiErrorMessage(result, 'Registration failed'));
+  }
+
+  return normalizeAuthResponse(result);
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
