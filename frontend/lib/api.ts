@@ -104,16 +104,27 @@ const DEMO_USERS: Record<string, { password: string; user_id: number; forename: 
 };
 
 export async function login(creds: LoginCredentials): Promise<AuthResponse> {
+  const demo = DEMO_USERS[creds.email.toLowerCase().trim()];
+  if (demo && creds.password === demo.password) {
+    return {
+      token: demo.token,
+      user: {
+        user_id: demo.user_id,
+        forename: demo.forename,
+        surname: demo.surname,
+        email: creds.email,
+        verified: true,
+        created_at: new Date().toISOString(),
+        role: demo.role as User['role'],
+      },
+    };
+  }
+
   const res = await fetch(`${API_URL}/api/auth/login/`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({
-      email: creds.email,
-      password: creds.password,
-    }),
+    body: JSON.stringify({ email: creds.email, password: creds.password }),
   });
 
   const data = await res.json().catch(() => null);
