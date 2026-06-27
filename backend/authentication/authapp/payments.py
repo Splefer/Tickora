@@ -91,7 +91,7 @@ def compute_line_items(event_id, tickets):
 def create_pending_booking(user, event_id):
     return Bookings.objects.create(
         requested_at=timezone.now(),
-        confirmed=False,
+        status='pending',
         user=user,
         event_id=event_id,
     )
@@ -161,7 +161,7 @@ def mark_paid(session_id):
         payment.save()
 
         booking = payment.booking
-        booking.confirmed = True
+        booking.status = 'confirmed'
         booking.save()
 
     return session.payment_status, payment.booking_id

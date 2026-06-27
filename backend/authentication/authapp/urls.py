@@ -1,27 +1,27 @@
-"""
-URL configuration for myproject project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
 from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("", views.home_view, name="home"),
-    path("register/", views.register_view, name="register"),
-    path("verify/", views.verify_view, name="verify"),
-    path("login/", views.login_view, name="login"),
-    path("logout/", views.logout_view, name="logout"),
+    path('auth/register/', views.register_view),
+    path('auth/login/', views.login_view),
+    path('auth/logout/', views.logout_view),
+
+    path('events/', views.events_list_view),
+    path('events/create/', views.create_event_view),
+    path('events/<int:event_id>/', views.event_detail_view),
+    path('events/<int:event_id>/deactivate/', views.deactivate_event_view),
+
+    path('organizer/events/', views.organizer_events_view),
+    path('organizer/reports/', views.organizer_reports_view),
+
+    path('bookings/', views.bookings_list_view),
+    path('bookings/create/', views.create_booking_view),
+    path('bookings/<int:booking_id>/', views.cancel_booking_view),
+
+    path('venues/', views.venues_view),
+    path('performer/events/', views.performer_events_view),
+
+    path('payments/checkout/', views.create_checkout_session_view),
+    path('payments/verify/', views.verify_payment_view),
+    path('payments/webhook/', views.stripe_webhook_view),
 ]
