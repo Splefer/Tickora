@@ -183,7 +183,25 @@ export async function getEvents(params?: {
   if (params?.category && params.category !== 'All') query.category = params.category;
   if (params?.search) query.search = params.search;
   const qs = Object.keys(query).length ? '?' + new URLSearchParams(query) : '';
-  return request<Event[]>(`/api/events/${qs}`);
+
+  try {
+    return await request<Event[]>(`/api/events/${qs}`);
+  } catch {
+    const { mockEvents } = await import('./mock-data');
+    let results = mockEvents;
+    if (params?.category && params.category !== 'All') {
+      results = results.filter((e) => e.category === params.category);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      results = results.filter(
+        (e) =>
+          e.event_name.toLowerCase().includes(q) ||
+          e.venue.venue_name.toLowerCase().includes(q),
+      );
+    }
+    return results;
+  }
 }
 
 export async function getEvent(id: number): Promise<Event | undefined> {
