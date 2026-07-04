@@ -5,6 +5,11 @@ urlpatterns = [
     path('auth/register/', views.register_view),
     path('auth/login/', views.login_view),
     path('auth/logout/', views.logout_view),
+    path('manager/request-link/', views.request_manager_link_view),
+    path('manager/pending-requests/', views.pending_manager_requests_view),
+    path('manager/approve/<int:request_id>/', views.approve_manager_request_view),
+    path('manager/deny/<int:request_id>/', views.deny_manager_request_view),
+    path('performer/manager/', views.performer_manager_view),
 
     path('events/', views.events_list_view),
     path('events/create/', views.create_event_view),
