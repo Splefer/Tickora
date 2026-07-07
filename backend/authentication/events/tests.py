@@ -5,7 +5,7 @@ what authapp's login_user does.
 """
 from django.test import TestCase, Client
 
-from authapp.models import Roles, Users, Venues, UpcomingEvents
+from authapp.models import Roles, Users, Venues, UpcomingEvents, TicketTypes
 
 
 def make_user(email, role):
@@ -40,12 +40,22 @@ class Evt01Tests(TestCase):
             "event_date": "2026-09-01",
             "description": "Annual showcase",
             "venue": "V001",
+            "ticket_types": [
+                {"tier": "GA", "price": "50.00"},
+                {"tier": "VIP", "price": "120.00"},
+            ],
         }, content_type="application/json")
         self.assertEqual(res.status_code, 201)
         body = res.json()
         self.assertEqual(body["event_name"], "Spring Showcase")
         self.assertEqual(body["organizer_id"], self.alice.user_id)
         self.assertEqual(UpcomingEvents.objects.count(), 1)
+        # ticket types created and returned
+        self.assertEqual(len(body["ticket_types"]), 2)
+        tiers = [t["tier"] for t in body["ticket_types"]]
+        self.assertIn("GA", tiers)
+        self.assertIn("VIP", tiers)
+        self.assertEqual(TicketTypes.objects.count(), 2)
 
     def test_missing_description_rejected(self):
         self.login(self.alice)
@@ -90,3 +100,35 @@ class Evt01Tests(TestCase):
         res = self.client.post("/api/events/create/", data="not json",
                                content_type="application/json")
         self.assertEqual(res.status_code, 400)
+
+    def test_ticket_type_required(self):
+        self.login(self.alice)
+        res = self.client.post("/api/events/create/", data={
+            "event_name": "No tickets", "event_date": "2026-09-01",
+            "description": "d", "venue": "V001",
+        }, content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+        # nothing created
+        self.assertEqual(UpcomingEvents.objects.count(), 0)
+
+    def test_negative_price_rejected_and_nothing_created(self):
+        self.login(self.alice)
+        res = self.client.post("/api/events/create/", data={
+            "event_name": "Bad price", "event_date": "2026-09-01",
+            "description": "d", "venue": "V001",
+            "ticket_types": [{"tier": "GA", "price": "-5.00"}],
+        }, content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+        # all-or-nothing: no event and no ticket types left behind
+        self.assertEqual(UpcomingEvents.objects.count(), 0)
+        self.assertEqual(TicketTypes.objects.count(), 0)
+
+    def test_missing_price_rejected(self):
+        self.login(self.alice)
+        res = self.client.post("/api/events/create/", data={
+            "event_name": "No price", "event_date": "2026-09-01",
+            "description": "d", "venue": "V001",
+            "ticket_types": [{"tier": "GA"}],
+        }, content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(UpcomingEvents.objects.count(), 0)

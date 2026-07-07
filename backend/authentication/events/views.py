@@ -7,18 +7,20 @@ Built in the same plain-Django style as authapp: function views with
 get_loggedin_user, json.loads on the body, and JsonResponse out.
 """
 import json
+from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from authapp.backend import get_loggedin_user
-from authapp.models import UpcomingEvents, Venues
+from authapp.models import TicketTypes, UpcomingEvents, Venues
 
 
-def _event_to_dict(event):
+def _event_to_dict(event, ticket_types=None):
     """Shape a single event for JSON responses."""
-    return {
+    data = {
         "event_id": event.event_id,
         "event_name": event.event_name,
         "event_date": (event.event_date.isoformat()
@@ -29,6 +31,12 @@ def _event_to_dict(event):
         "is_active": event.is_active,
         "organizer_id": event.organizer_id,
     }
+    if ticket_types is not None:
+        data["ticket_types"] = [
+            {"type_id": tt.type_id, "tier": tt.tier, "price": str(tt.price)}
+            for tt in ticket_types
+        ]
+    return data
 
 
 @csrf_exempt
@@ -36,9 +44,13 @@ def _event_to_dict(event):
 def create_event_view(request):
     """POST /api/events/create/
 
-    Body: {"event_name", "event_date" (YYYY-MM-DD), "description", "venue"}
-    Returns: the created event, or an error.
-    Only logged-in organizers may create events.
+    Body: {
+        "event_name", "event_date" (YYYY-MM-DD), "description", "venue",
+        "ticket_types": [{"tier": str, "price": str/number}, ...]
+    }
+    Returns: the created event with its ticket types, or an error.
+    Only logged-in organizers may create events. At least one ticket type is
+    required. If anything is invalid, nothing is created (all or nothing).
     """
     user = get_loggedin_user(request)
     if user is None:
@@ -72,16 +84,62 @@ def create_event_view(request):
     except Venues.DoesNotExist:
         return JsonResponse({"error": "Unknown venue."}, status=400)
 
-    event = UpcomingEvents.objects.create(
-        event_name=event_name,
-        event_date=event_date,
-        description=description,
-        venue=venue,
-        organizer=user,
-        is_active=1,  # listed for ticket sales
-    )
+    # Validate ticket types: at least one, each with a tier and a price > 0.
+    raw_types = data.get("ticket_types")
+    if not raw_types or not isinstance(raw_types, list):
+        return JsonResponse(
+            {"error": "At least one ticket type is required."}, status=400
+        )
 
-    return JsonResponse(_event_to_dict(event), status=201)
+    clean_types = []
+    for i, tt in enumerate(raw_types):
+        if not isinstance(tt, dict):
+            return JsonResponse(
+                {"error": f"Ticket type #{i + 1} is not valid."}, status=400
+            )
+        tier = tt.get("tier")
+        price_raw = tt.get("price")
+        if not tier:
+            return JsonResponse(
+                {"error": f"Ticket type #{i + 1} is missing a tier name."},
+                status=400,
+            )
+        if len(str(tier)) > 20:
+            return JsonResponse(
+                {"error": f"Ticket tier '{tier}' is too long (max 20 chars)."},
+                status=400,
+            )
+        try:
+            price = Decimal(str(price_raw))
+        except (InvalidOperation, TypeError):
+            return JsonResponse(
+                {"error": f"Ticket type '{tier}' has an invalid price."},
+                status=400,
+            )
+        if price <= 0:
+            return JsonResponse(
+                {"error": f"Ticket type '{tier}' must have a price above 0."},
+                status=400,
+            )
+        clean_types.append((str(tier), price))
+
+    # All or nothing: create the event and its ticket types together, so a
+    # bad ticket never leaves a half-created event behind.
+    with transaction.atomic():
+        event = UpcomingEvents.objects.create(
+            event_name=event_name,
+            event_date=event_date,
+            description=description,
+            venue=venue,
+            organizer=user,
+            is_active=1,  # listed for ticket sales
+        )
+        created_types = [
+            TicketTypes.objects.create(tier=tier, price=price, event=event)
+            for tier, price in clean_types
+        ]
+
+    return JsonResponse(_event_to_dict(event, created_types), status=201)
 
 
 @require_GET
