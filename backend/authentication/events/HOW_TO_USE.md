@@ -88,14 +88,23 @@ Content-Type: application/json
   "event_name": "Spring Showcase",
   "event_date": "2026-09-01",
   "description": "Annual showcase event",
-  "venue": "V001"
+  "venue": "V001",
+  "ticket_types": [
+    {"tier": "GA", "price": "50.00"},
+    {"tier": "VIP", "price": "120.00"}
+  ]
 }
 ```
 
 `event_date` is `YYYY-MM-DD`. `venue` is an existing venue id (a short string
 code like `V001`). Use `GET /api/events/venues/` to see valid ids.
 
-Success returns `201` and the created event:
+`ticket_types` is required: an organizer must include at least one ticket type
+when creating an event. Each needs a `tier` name (max 20 chars) and a `price`
+above 0. The event and its ticket types are created together, all or nothing,
+so if any ticket type is invalid, nothing is created.
+
+Success returns `201` and the created event with its ticket types:
 
 ```json
 {
@@ -105,16 +114,23 @@ Success returns `201` and the created event:
   "description": "Annual showcase event",
   "venue": "V001",
   "is_active": 1,
-  "organizer_id": 4
+  "organizer_id": 4,
+  "ticket_types": [
+    {"type_id": 3, "tier": "GA", "price": "50.00"},
+    {"type_id": 4, "tier": "VIP", "price": "120.00"}
+  ]
 }
 ```
+
+The `type_id` values are what the customer booking flow and the checkout
+endpoint use to identify a chosen ticket.
 
 Possible errors:
 
 - `401` not logged in.
 - `403` logged in, but not an organizer.
-- `400` a required field is missing, the JSON is invalid, or the venue id is
-  unknown.
+- `400` a required field is missing, no ticket types were given, a ticket price
+  is missing or not above 0, the JSON is invalid, or the venue id is unknown.
 
 ### List your events
 
@@ -143,9 +159,11 @@ From the `authentication` folder, with the virtual environment active:
 python manage.py test events
 ```
 
-Seven tests cover creating an event, requiring a description, requiring login,
-restricting creation to organizers, organizers seeing only their own events,
-listing venues, and rejecting invalid JSON. You should see `OK`.
+Ten tests cover creating an event (with ticket types), requiring a description,
+requiring login, restricting creation to organizers, organizers seeing only
+their own events, listing venues, rejecting invalid JSON, requiring at least one
+ticket type, rejecting a negative price (creating nothing), and rejecting a
+missing price. You should see `OK`.
 
 Note: tests need `django.contrib.sessions` in `INSTALLED_APPS` and
 `SessionMiddleware` in `MIDDLEWARE`. The real project already has both.
@@ -176,8 +194,10 @@ python manage.py try_event
 ```
 
 It asks for an organizer email, shows the available venues, then asks for the
-event name, date, description, and venue id. It creates the event and prints
-back what was saved. Use `des@demo.com` and `V001` if you seeded the demo data.
+event name, date, description, and venue id, and finally for one or more ticket
+tiers and their prices (leave the tier name blank to finish). It creates the
+event and its ticket types and prints back what was saved, including each
+ticket's `type_id`. Use `des@demo.com` and `V001` if you seeded the demo data.
 
 ---
 
