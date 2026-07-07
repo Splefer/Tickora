@@ -18,7 +18,18 @@ from authapp.models import UpcomingEvents, TicketTypes
 
 
 def _event_summary(event):
-    """Compact shape for list/search results."""
+    """
+    -------------------------------------------------------
+    Builds the compact shape used for list and search results.
+    Use: data = _event_summary(event)
+    -------------------------------------------------------
+    Parameters:
+        event - an active event row - UpcomingEvents
+    Returns:
+        data - dict with event_id, event_name, event_date,
+               venue id and venue_name - dict
+    -------------------------------------------------------
+    """
     return {
         "event_id": event.event_id,
         "event_name": event.event_name,
@@ -29,6 +40,17 @@ def _event_summary(event):
 
 
 def _ticket_type_dict(tt):
+    """
+    -------------------------------------------------------
+    Builds the shape for one ticket type in a detail response.
+    Use: data = _ticket_type_dict(tt)
+    -------------------------------------------------------
+    Parameters:
+        tt - a ticket type row - TicketTypes
+    Returns:
+        data - dict with type_id, tier, and price (as string) - dict
+    -------------------------------------------------------
+    """
     return {
         "type_id": tt.type_id,
         "tier": tt.tier,
@@ -38,10 +60,17 @@ def _ticket_type_dict(tt):
 
 @require_GET
 def list_events_view(request):
-    """GET /api/booking/events/
-
+    """
+    -------------------------------------------------------
     Lists active (listed) events for customers to browse.
-    Only events with is_active = 1 are shown.
+    Only events with is_active = 1 are returned.
+    Use: GET /api/booking/events/
+    -------------------------------------------------------
+    Parameters:
+        request - current HTTP request - HttpRequest
+    Returns:
+        response - JSON {"events": [...]} of event summaries - JsonResponse
+    -------------------------------------------------------
     """
     events = (UpcomingEvents.objects
               .filter(is_active=1)
@@ -52,11 +81,22 @@ def list_events_view(request):
 
 @require_GET
 def event_detail_view(request, event_id):
-    """GET /api/booking/events/<event_id>/
-
-    Full detail for one event, including its ticket types and prices so the
-    customer can choose what to buy. The type_id values here are what the
-    checkout endpoint expects.
+    """
+    -------------------------------------------------------
+    Returns full detail for one active event, including its
+    venue and its ticket types with prices, so a customer can
+    choose what to buy. The type_id values in the response are
+    what the checkout endpoint expects.
+    Use: GET /api/booking/events/<event_id>/
+    -------------------------------------------------------
+    Parameters:
+        request  - current HTTP request - HttpRequest
+        event_id - id of the event to show - int
+    Returns:
+        response - JSON with the event, venue, ticket_types, and
+                   checkout_endpoint; 404 if the event does not
+                   exist or is not active - JsonResponse
+    -------------------------------------------------------
     """
     try:
         event = UpcomingEvents.objects.select_related("venue").get(
@@ -88,10 +128,19 @@ def event_detail_view(request, event_id):
 
 @require_GET
 def search_events_view(request):
-    """GET /api/booking/search/?q=<term>
-
-    Searches active events by name (case-insensitive, partial match).
-    Returns the same compact shape as the list endpoint.
+    """
+    -------------------------------------------------------
+    Searches active events by name (case-insensitive, partial
+    match) and returns the same compact shape as the list.
+    Use: GET /api/booking/search/?q=<term>
+    -------------------------------------------------------
+    Parameters:
+        request - current HTTP request; expects a "q" query
+                  parameter with the search term - HttpRequest
+    Returns:
+        response - JSON {"events": [...]} of matches, or a 400
+                   error if "q" is missing - JsonResponse
+    -------------------------------------------------------
     """
     term = (request.GET.get("q") or "").strip()
     if not term:

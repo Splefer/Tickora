@@ -1,4 +1,19 @@
-"""Customer booking (browse/detail/search) routes, plain-Django style."""
+
+"""
+-------------------------------------------------------
+Customer booking routes (browse / detail / search)
+-------------------------------------------------------
+Maps the customer-facing booking URLs to their views. Plain
+Django style, matching authapp. All routes are read-only
+browsing; the actual purchase is handled by the existing
+checkout endpoint in authapp.
+
+1 - To browse all available events
+2 - To look at the specific details of a chosen event
+3 - To search for specific events.
+-------------------------------------------------------
+"""
+
 from django.urls import path
 
 from . import views
