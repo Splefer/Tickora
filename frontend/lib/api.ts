@@ -7,6 +7,7 @@ import type {
   Booking,
   OrganizerReport,
 } from './types';
+import type { ManagedArtist, AppearanceRequest } from '@/lib/types';
 import {
   mockEvents,
   mockBookings,
@@ -18,6 +19,52 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 const sessionBookings: Booking[] = [];
+
+const MOCK_ARTISTS: ManagedArtist[] = [
+  {
+    artist_id: 1,
+    artist_name: 'Nova Aria',
+    genre: 'Pop',
+    pending_request_count: 2,
+    upcoming_appearance_count: 3,
+  },
+  {
+    artist_id: 2,
+    artist_name: 'The Low Keys',
+    genre: 'Indie Rock',
+    pending_request_count: 0,
+    upcoming_appearance_count: 1,
+  },
+];
+
+const MOCK_REQUESTS: Record<number, AppearanceRequest[]> = {
+  1: [
+    {
+      request_id: 101,
+      artist_id: 1,
+      event_id: 501,
+      event_name: 'Summer Nights Festival',
+      event_date: '2026-08-14',
+      venue: { venue_name: 'Riverside Amphitheatre', venue_address: '400 River Rd' },
+      requested_by: 'Blue Horizon Events',
+      fee_offer: 8000,
+      notes: 'Headline slot, 45 min set.',
+      status: 'pending',
+    },
+    {
+      request_id: 102,
+      artist_id: 1,
+      event_id: 502,
+      event_name: 'Downtown Music Crawl',
+      event_date: '2026-09-02',
+      venue: { venue_name: 'Union Square Stage', venue_address: '12 Union Sq' },
+      requested_by: 'CityPulse Presents',
+      fee_offer: 3000,
+      status: 'pending',
+    },
+  ],
+  2: [],
+};
 
 async function request<T>(path: string, options?: RequestInit, token?: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -299,6 +346,43 @@ export async function updateEvent(
 export async function deactivateEvent(_token: string, id: number): Promise<void> {
   // TODO: return request<void>(`/api/events/${id}/deactivate/`, { method: 'POST' }, token);
   return new Promise((resolve) => setTimeout(resolve, 300));
+}
+
+// Fetches every artist managed by the currently logged-in organizer.
+export async function getManagedArtists(token: string): Promise<ManagedArtist[]> {
+  // TODO: replace with real request once backend route exists
+  // return fetchJson('/api/organizer/artists', token);
+  return Promise.resolve(MOCK_ARTISTS);
+}
+
+// Fetches all appearance requests sent in for a specific artist.
+export async function getArtistRequests(
+  token: string,
+  artistId: number,
+): Promise<AppearanceRequest[]> {
+  // TODO: replace with real request once backend route exists
+  // return fetchJson(`/api/organizer/artists/${artistId}/requests`, token);
+  return Promise.resolve(MOCK_REQUESTS[artistId] ?? []);
+}
+
+// Approves or declines a single appearance request.
+export async function respondToAppearanceRequest(
+  token: string,
+  requestId: number,
+  status: 'approved' | 'declined',
+  reason?: string,
+): Promise<AppearanceRequest> {
+  // TODO: replace with real PATCH request once backend route exists
+  // return fetchJson(`/api/organizer/requests/${requestId}`, token, {
+  //   method: 'PATCH',
+  //   body: JSON.stringify({ status, reason }),
+  // });
+  const all = Object.values(MOCK_REQUESTS).flat();
+  const found = all.find((r) => r.request_id === requestId);
+  if (!found) throw new Error('Request not found');
+  found.status = status;
+  found.decline_reason = reason;
+  return Promise.resolve(found);
 }
 
 // ── Performer ─────────────────────────────────────────────────────────────────
