@@ -14,6 +14,10 @@ class Bookings(models.Model):
 
 
 class EventPerformers(models.Model):
+    # The real table has no surrogate id column: its primary key is the
+    # (event_id, performer_id) pair. Without this, Django assumes an
+    # implicit auto 'id' PK that doesn't exist, and every query 500s.
+    pk = models.CompositePrimaryKey('event_id', 'performer_id')
     event = models.ForeignKey('UpcomingEvents', models.DO_NOTHING)
     performer = models.ForeignKey('Users', models.DO_NOTHING)
 

@@ -23,6 +23,8 @@ urlpatterns = [
     path("api/auth/", include("authapp.api_urls")),
     # JSON API — payments (Stripe)
     path("api/payments/", include("authapp.payment_urls")),
+    # JSON API — performer appearance approval workflow (BKG-2.1)
+    path("api/", include("appearances.urls")),
     # HTML template routes
     path("authapp/", include("authapp.urls")),
 ]

@@ -23,10 +23,13 @@ def get_json_body(request):
 def user_to_dict(user):
     return {
         "id": getattr(user, "id", None),
+        "user_id": getattr(user, "user_id", None),
         "forename": getattr(user, "forename", ""),
         "surname": getattr(user, "surname", ""),
         "email": getattr(user, "email", ""),
-        "role": getattr(user, "role", ""),
+        "verified": getattr(user, "verified", False),
+        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
+        "role": user.role.role_name if getattr(user, "role", None) else "",
     }
 
 

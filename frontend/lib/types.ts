@@ -106,6 +106,6 @@ export interface AppearanceRequest {
   requested_by: string;   // name of the organizer/promoter sending the request
   fee_offer?: number;
   notes?: string;
-  status: 'pending' | 'approved' | 'declined';
+  status: 'pending' | 'approved' | 'declined' | 'changes_requested';
   decline_reason?: string;
 }
