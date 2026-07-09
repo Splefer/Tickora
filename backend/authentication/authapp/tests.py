@@ -22,12 +22,12 @@ from .backend import (
 
 class Authentication_tests(TestCase):
     def setUp(self):
-        self.role = Roles.objects.create(role_name="customer")
+        self.role = Roles.objects.get(role_name="customer")
         self.user = Users.objects.create(
             forename = "first",
             surname = "user",
             email = "test@mylaurier.ca",
-            pass_field = pass_hash("TestPassword!"),
+            password_hash = pass_hash("TestPassword!"),
             address = "Waterloo, ON",
             role = self.role,
             verified = True
@@ -54,14 +54,14 @@ class Authentication_tests(TestCase):
             "forename": "Padmira",
             "surname": "Izadbakhsh",
             "email": "izadbakhsh.p16@gmail.com",
-            "pass_field": "pass1234@",
+            "password_hash": "pass1234@",
             "role": "customer",
             "address": "65 University Ave W, Waterloo, ON"
         }
         user = create_user(sample_data)
         self.assertIsNotNone(user)
         self.assertEqual(user.email, "izadbakhsh.p16@gmail.com")
-        self.assertNotEqual(user.pass_field, "pass1234@")
+        self.assertNotEqual(user.password_hash, "pass1234@")
         self.assertFalse(user.verified)
         
     def test_register(self):
@@ -69,7 +69,7 @@ class Authentication_tests(TestCase):
             "forename": "Padmira",
             "surname": "Izadbakhsh",
             "email": "izadbakhsh.p16@gmail.com",
-            "pass_field": "pass1234@",
+            "password_hash": "pass1234@",
             "role": "customer",
             "address": "65 University Ave W, Waterloo, ON"
         }
@@ -82,7 +82,7 @@ class Authentication_tests(TestCase):
             forename = "second",
             surname = "user",
             email = "verify@mylaurier.ca",
-            pass_field = pass_hash("TestPassword2"),
+            password_hash = pass_hash("TestPassword2"),
             role = self.role,
             verified = False,
             verification_code = "012345"
@@ -96,7 +96,7 @@ class Authentication_tests(TestCase):
             forename = "third",
             surname = "user",
             email = "auth@mylaurier.ca",
-            pass_field = pass_hash("ThirdTestPassword!"),
+            password_hash = pass_hash("ThirdTestPassword!"),
             role = self.role,
             verified = True
             )

@@ -43,6 +43,12 @@ export default function Navbar() {
             >
               Browse Events
             </Link>
+            <Link
+              href="/calendar"
+              className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
+            >
+              Calendar
+            </Link>
             {user?.role === 'organizer' && (
               <Link
                 href="/organizer"
@@ -142,6 +148,13 @@ export default function Navbar() {
               className="text-sm font-medium text-gray-300 hover:text-white"
             >
               Browse Events
+            </Link>
+            <Link
+              href="/calendar"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm font-medium text-gray-300 hover:text-white"
+            >
+              Calendar
             </Link>
             {user ? (
               <>

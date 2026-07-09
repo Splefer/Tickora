@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getOrganizerEvents, getOrganizerReports, deactivateEvent } from '@/lib/api';
+import { getOrganizerEvents, getOrganizerReports, deactivateEvent, createEvent } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import StatCard from '@/components/StatCard';
 import type { Event, OrganizerReport } from '@/lib/types';
@@ -35,6 +35,8 @@ export default function OrganizerPage() {
     category: 'Music',
   });
   const [createSuccess, setCreateSuccess] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -66,11 +68,29 @@ export default function OrganizerPage() {
   const totalSold = reports.reduce((s, r) => s + r.tickets_sold, 0);
   const activeCount = events.filter((e) => e.is_active).length;
 
-  function handleCreateSubmit(e: React.FormEvent) {
+  async function handleCreateSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setCreateSuccess(true);
-    setTimeout(() => setCreateSuccess(false), 3000);
-    setNewEvent({ name: '', date: '', venue: '', description: '', price: '', category: 'Music' });
+    setCreateError('');
+    setCreating(true);
+    try {
+      const created = await createEvent(token ?? '', {
+        event_name: newEvent.name,
+        event_date: newEvent.date,
+        category: newEvent.category,
+        description: newEvent.description,
+        venue_name: newEvent.venue,
+        price: parseFloat(newEvent.price) || 0,
+      } as any);
+      setEvents((prev) => [created, ...prev]);
+      setCreateSuccess(true);
+      setTimeout(() => setCreateSuccess(false), 3000);
+      setNewEvent({ name: '', date: '', venue: '', description: '', price: '', category: 'Music' });
+      setTab('events');
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create event');
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -317,7 +337,12 @@ export default function OrganizerPage() {
 
               {createSuccess && (
                 <div className="mt-4 rounded-xl border border-green-800 bg-green-900/20 px-4 py-3 text-sm text-green-400">
-                  ✅ Event created successfully! (Backend endpoint pending)
+                  ✅ Event created successfully!
+                </div>
+              )}
+              {createError && (
+                <div className="mt-4 rounded-xl border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400">
+                  {createError}
                 </div>
               )}
 
@@ -398,9 +423,10 @@ export default function OrganizerPage() {
 
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+                  disabled={creating}
+                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Publish event
+                  {creating ? 'Publishing…' : 'Publish event'}
                 </button>
               </form>
             </div>

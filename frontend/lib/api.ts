@@ -7,17 +7,8 @@ import type {
   Booking,
   OrganizerReport,
 } from './types';
-import {
-  mockEvents,
-  mockBookings,
-  mockOrganizerEvents,
-  mockReports,
-  mockPerformerEvents,
-} from './mock-data';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-
-const sessionBookings: Booking[] = [];
 
 async function request<T>(path: string, options?: RequestInit, token?: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -68,12 +59,11 @@ function normalizeUser(rawUser: any): User {
 
 function normalizeAuthResponse(data: any): AuthResponse {
   return {
-    // Django session auth may not return a real token.
-    // This placeholder keeps the current AuthContext working for now.
     token: data.token ?? 'django-session',
     user: normalizeUser(data.user),
   };
 }
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 const DEMO_USERS: Record<string, { password: string; user_id: number; forename: string; surname: string; role: string; token: string }> = {
@@ -161,20 +151,15 @@ export async function loginAsOrganizer(creds: LoginCredentials): Promise<AuthRes
 }
 
 export async function register(data: RegisterData): Promise<AuthResponse> {
-  // SWAPPED: mock Promise auth → real Django fetch call
   const res = await fetch(`${API_URL}/api/auth/register/`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({
       forename: data.forename,
       surname: data.surname,
       email: data.email,
       role: data.role,
-
-      // Backend register validator expects pass_field, not password
       pass_field: data.password,
     }),
   });
@@ -194,116 +179,107 @@ export async function getEvents(params?: {
   category?: string;
   search?: string;
 }): Promise<Event[]> {
-  // TODO: return request<Event[]>(`/api/events/${params ? '?' + new URLSearchParams(params as Record<string, string>) : ''}`);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let events = [...mockEvents];
-      if (params?.category && params.category !== 'All') {
-        events = events.filter((e) => e.category === params.category);
-      }
-      if (params?.search) {
-        const q = params.search.toLowerCase();
-        events = events.filter(
-          (e) =>
-            e.event_name.toLowerCase().includes(q) ||
-            e.venue.venue_name.toLowerCase().includes(q) ||
-            (e.category ?? '').toLowerCase().includes(q),
-        );
-      }
-      resolve(events);
-    }, 300);
-  });
+  const query: Record<string, string> = {};
+  if (params?.category && params.category !== 'All') query.category = params.category;
+  if (params?.search) query.search = params.search;
+  const qs = Object.keys(query).length ? '?' + new URLSearchParams(query) : '';
+
+  try {
+    return await request<Event[]>(`/api/events/${qs}`);
+  } catch {
+    const { mockEvents } = await import('./mock-data');
+    let results = mockEvents;
+    if (params?.category && params.category !== 'All') {
+      results = results.filter((e) => e.category === params.category);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      results = results.filter(
+        (e) =>
+          e.event_name.toLowerCase().includes(q) ||
+          e.venue.venue_name.toLowerCase().includes(q),
+      );
+    }
+    return results;
+  }
 }
 
 export async function getEvent(id: number): Promise<Event | undefined> {
-  // TODO: return request<Event>(`/api/events/${id}/`);
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(mockEvents.find((e) => e.event_id === id)), 200);
-  });
+  return request<Event>(`/api/events/${id}/`);
 }
 
 // ── Bookings ──────────────────────────────────────────────────────────────────
 
-export async function getMyBookings(_token: string): Promise<Booking[]> {
-  // TODO: return request<Booking[]>('/api/bookings/', undefined, token);
-  return new Promise((resolve) => setTimeout(() => resolve([...mockBookings, ...sessionBookings]), 300));
+export async function getMyBookings(token: string): Promise<Booking[]> {
+  return request<Booking[]>('/api/bookings/', undefined, token);
 }
 
 export async function createBooking(
-  _token: string,
+  token: string,
   eventId: number,
   tickets: { type_id: number; quantity: number }[],
 ): Promise<Booking> {
-  // TODO: return request<Booking>('/api/bookings/', { method: 'POST', body: JSON.stringify({ event_id: eventId, tickets }) }, token);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const event = mockEvents.find((e) => e.event_id === eventId)!;
-      const bookingId = Math.floor(Math.random() * 9000) + 1000;
-
-      let seatNum = 1;
-      const ticketItems = tickets.flatMap(({ type_id, quantity }) => {
-        const ticketType = event.ticket_types?.find((tt) => tt.type_id === type_id);
-        if (!ticketType) return [];
-        return Array.from({ length: quantity }, () => ({
-          seat_id: `T${bookingId}${String(seatNum++).padStart(2, '0')}`,
-          type: ticketType,
-        }));
-      });
-
-      const booking: Booking = {
-        booking_id: bookingId,
-        requested_at: new Date().toISOString(),
-        confirmed: 1,
-        user_id: 1,
-        event,
-        tickets: ticketItems,
-      };
-
-      sessionBookings.push(booking);
-      resolve(booking);
-    }, 700);
-  });
+  return request<Booking>(
+    '/api/bookings/create/',
+    { method: 'POST', body: JSON.stringify({ event_id: eventId, tickets }) },
+    token,
+  );
 }
 
-export async function cancelBooking(_token: string, bookingId: number): Promise<void> {
-  // TODO: return request<void>(`/api/bookings/${bookingId}/`, { method: 'DELETE' }, token);
-  return new Promise((resolve) => setTimeout(resolve, 400));
+export async function cancelBooking(token: string, bookingId: number): Promise<void> {
+  return request<void>(`/api/bookings/${bookingId}/`, { method: 'DELETE' }, token);
 }
 
 // ── Organizer ─────────────────────────────────────────────────────────────────
 
-export async function getOrganizerEvents(_token: string): Promise<Event[]> {
-  // TODO: return request<Event[]>('/api/organizer/events/', undefined, token);
-  return new Promise((resolve) => setTimeout(() => resolve(mockOrganizerEvents), 300));
+export async function getOrganizerEvents(token: string): Promise<Event[]> {
+  return request<Event[]>('/api/organizer/events/', undefined, token);
 }
 
-export async function getOrganizerReports(_token: string): Promise<OrganizerReport[]> {
-  // TODO: return request<OrganizerReport[]>('/api/organizer/reports/', undefined, token);
-  return new Promise((resolve) => setTimeout(() => resolve(mockReports), 300));
+export async function getOrganizerReports(token: string): Promise<OrganizerReport[]> {
+  return request<OrganizerReport[]>('/api/organizer/reports/', undefined, token);
 }
 
-export async function createEvent(_token: string, _data: Partial<Event>): Promise<Event> {
-  // TODO: return request<Event>('/api/events/', { method: 'POST', body: JSON.stringify(data) }, token);
-  throw new Error('Not yet implemented — backend endpoint pending');
+export async function createEvent(
+  token: string,
+  data: Partial<Event> & { venue_name?: string; price?: number },
+): Promise<Event> {
+  return request<Event>('/api/events/create/', { method: 'POST', body: JSON.stringify(data) }, token);
 }
 
 export async function updateEvent(
   _token: string,
-  id: number,
+  _id: number,
   _data: Partial<Event>,
 ): Promise<Event> {
-  // TODO: return request<Event>(`/api/events/${id}/`, { method: 'PUT', body: JSON.stringify(data) }, token);
-  throw new Error('Not yet implemented — backend endpoint pending');
+  throw new Error('Not yet implemented');
 }
 
-export async function deactivateEvent(_token: string, id: number): Promise<void> {
-  // TODO: return request<void>(`/api/events/${id}/deactivate/`, { method: 'POST' }, token);
-  return new Promise((resolve) => setTimeout(resolve, 300));
+export async function deactivateEvent(token: string, id: number): Promise<void> {
+  return request<void>(`/api/events/${id}/deactivate/`, { method: 'POST' }, token);
 }
 
 // ── Performer ─────────────────────────────────────────────────────────────────
 
-export async function getPerformerEvents(_token: string): Promise<Event[]> {
-  // TODO: return request<Event[]>('/api/performer/events/', undefined, token);
-  return new Promise((resolve) => setTimeout(() => resolve(mockPerformerEvents), 300));
+export async function getPerformerEvents(token: string): Promise<Event[]> {
+  return request<Event[]>('/api/performer/events/', undefined, token);
+}
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+
+export async function createCheckoutSession(
+  token: string,
+  eventId: number,
+  eventName: string,
+  tickets: { type_id: number; quantity: number }[],
+): Promise<{ checkout_url: string }> {
+  return request<{ checkout_url: string }>(
+    '/api/payments/checkout/',
+    { method: 'POST', body: JSON.stringify({ event_id: eventId, event_name: eventName, tickets }) },
+    token,
+  );
+}
+
+export async function verifyPayment(sessionId: string): Promise<{ status: string; booking_id: number }> {
+  return request<{ status: string; booking_id: number }>(`/api/payments/verify/?session_id=${sessionId}`);
 }

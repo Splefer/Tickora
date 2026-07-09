@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createBooking } from '@/lib/api';
+import { createCheckoutSession, verifyPayment } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 
 interface SelectedTicket {
@@ -18,15 +18,12 @@ function CheckoutContent() {
   const router = useRouter();
   const { user, token } = useAuth();
 
+  const sessionId = searchParams.get('session_id');
   const eventId = Number(searchParams.get('event_id'));
   const eventName = searchParams.get('event_name') ?? '';
   const ticketsRaw = searchParams.get('tickets');
   const tickets: SelectedTicket[] = ticketsRaw ? (JSON.parse(ticketsRaw) as SelectedTicket[]) : [];
 
-  const [cardName, setCardName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -35,68 +32,77 @@ function CheckoutContent() {
     if (!user) router.push('/login');
   }, [user, router]);
 
+  // Came back from Stripe — verify and show confirmation
+  useEffect(() => {
+    if (!sessionId) return;
+    verifyPayment(sessionId)
+      .then(({ status }) => {
+        if (status === 'paid') setSuccess(true);
+        else setError('Payment not completed. Please try again.');
+      })
+      .catch(() => setError('Could not verify payment. Please contact support.'));
+  }, [sessionId]);
+
   const subtotal = tickets.reduce((sum, t) => sum + t.price * t.quantity, 0);
-  const serviceFee = 0;
-  const total = subtotal + serviceFee;
+  const total = subtotal;
 
-  function formatCard(val: string) {
-    return val
-      .replace(/\D/g, '')
-      .slice(0, 16)
-      .replace(/(.{4})/g, '$1 ')
-      .trim();
-  }
-
-  function formatExpiry(val: string) {
-    const digits = val.replace(/\D/g, '').slice(0, 4);
-    if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return digits;
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  async function handlePay(e: React.FormEvent) {
     e.preventDefault();
+    if (!token) { router.push('/login'); return; }
     setError('');
     setLoading(true);
     try {
-      await createBooking(
-        token ?? '',
-        eventId,
-        tickets.map((t) => ({ type_id: t.type_id, quantity: t.quantity })),
-      );
-      setSuccess(true);
+      const { checkout_url } = await createCheckoutSession(token, eventId, eventName, tickets.map((t) => ({ type_id: t.type_id, quantity: t.quantity })));
+      window.location.href = checkout_url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Payment failed. Please try again.');
-    } finally {
+      setError(err instanceof Error ? err.message : 'Could not start checkout. Please try again.');
       setLoading(false);
     }
   }
 
-  if (success) {
+  if (success || sessionId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="max-w-md text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-900/40 text-4xl">
-            ✅
-          </div>
-          <h1 className="mt-6 text-2xl font-bold text-white">Booking confirmed!</h1>
-          <p className="mt-3 text-gray-400">
-            Your tickets for <span className="text-white font-medium">{eventName}</span> have been
-            booked. Check your email for confirmation.
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/dashboard"
-              className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-500"
-            >
-              View my bookings
-            </Link>
-            <Link
-              href="/events"
-              className="rounded-xl border border-gray-700 px-6 py-3 text-sm font-semibold text-gray-300 hover:border-gray-500 hover:text-white"
-            >
-              Browse more events
-            </Link>
-          </div>
+          {success ? (
+            <>
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-900/40 text-4xl">
+                ✅
+              </div>
+              <h1 className="mt-6 text-2xl font-bold text-white">Booking confirmed!</h1>
+              <p className="mt-3 text-gray-400">
+                Your tickets for <span className="text-white font-medium">{eventName}</span> have been
+                booked. Check your email for confirmation.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <Link
+                  href="/dashboard"
+                  className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-500"
+                >
+                  View my bookings
+                </Link>
+                <Link
+                  href="/events"
+                  className="rounded-xl border border-gray-700 px-6 py-3 text-sm font-semibold text-gray-300 hover:border-gray-500 hover:text-white"
+                >
+                  Browse more events
+                </Link>
+              </div>
+            </>
+          ) : error ? (
+            <>
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-900/40 text-4xl">
+                ❌
+              </div>
+              <h1 className="mt-6 text-2xl font-bold text-white">Payment issue</h1>
+              <p className="mt-3 text-sm text-red-400">{error}</p>
+              <Link href="/events" className="mt-6 inline-block text-sm text-indigo-400 hover:underline">
+                Back to events
+              </Link>
+            </>
+          ) : (
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent mx-auto" />
+          )}
         </div>
       </div>
     );
@@ -111,13 +117,13 @@ function CheckoutContent() {
       <h1 className="mt-6 text-2xl font-bold text-white">Checkout</h1>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-5">
-        {/* Payment form */}
+        {/* Pay button */}
         <div className="lg:col-span-3">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handlePay} className="space-y-5">
             <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
-              <h2 className="text-base font-semibold text-white">Payment details</h2>
+              <h2 className="text-base font-semibold text-white">Secure payment via Stripe</h2>
               <p className="mt-1 text-xs text-gray-500">
-                Your payment is processed securely. Card details are never stored.
+                You'll be redirected to Stripe's hosted checkout to complete your payment safely.
               </p>
 
               {error && (
@@ -125,66 +131,6 @@ function CheckoutContent() {
                   {error}
                 </div>
               )}
-
-              <div className="mt-5 space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-300">
-                    Cardholder name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={cardName}
-                    onChange={(e) => setCardName(e.target.value)}
-                    placeholder="Alex Thompson"
-                    className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-300">
-                    Card number
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(formatCard(e.target.value))}
-                    placeholder="1234 5678 9012 3456"
-                    maxLength={19}
-                    className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 font-mono text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-300">
-                      Expiry
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={expiry}
-                      onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                      placeholder="MM/YY"
-                      maxLength={5}
-                      className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 font-mono text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-300">CVV</label>
-                    <input
-                      type="text"
-                      required
-                      value={cvv}
-                      onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                      placeholder="123"
-                      maxLength={4}
-                      className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 font-mono text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-              </div>
             </div>
 
             <button
@@ -192,13 +138,13 @@ function CheckoutContent() {
               disabled={loading || tickets.length === 0}
               className="w-full rounded-xl bg-indigo-600 py-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? 'Processing…' : `Pay $${total.toFixed(2)}`}
+              {loading ? 'Redirecting to Stripe…' : `Pay $${total.toFixed(2)} with Stripe`}
             </button>
 
             <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
               <span>🔒 SSL encrypted</span>
               <span>·</span>
-              <span>💳 Secure payment</span>
+              <span>💳 Powered by Stripe</span>
               <span>·</span>
               <span>$0 hidden fees</span>
             </div>
