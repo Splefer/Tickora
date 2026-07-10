@@ -1,4 +1,0 @@
-Django==6.0.6
-stripe
-mysqlclient
-django-cors-headers
