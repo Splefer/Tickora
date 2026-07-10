@@ -43,12 +43,22 @@ export default function Navbar() {
             >
               Browse Events
             </Link>
+
             <Link
               href="/calendar"
               className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
             >
               Calendar
             </Link>
+
+            {/* NEW: My Events */}
+            <Link
+              href="/my-events"
+              className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
+            >
+              My Events
+            </Link>
+
             {user?.role === 'organizer' && (
               <Link
                 href="/organizer"
@@ -57,6 +67,7 @@ export default function Navbar() {
                 My Events
               </Link>
             )}
+
             {user?.role === 'performer' && (
               <Link
                 href="/performer"
@@ -83,6 +94,7 @@ export default function Navbar() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
+
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-800 bg-gray-900 py-1 shadow-2xl">
                     <Link
@@ -92,6 +104,7 @@ export default function Navbar() {
                     >
                       Dashboard
                     </Link>
+
                     <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -109,6 +122,7 @@ export default function Navbar() {
                 >
                   Sign in
                 </Link>
+
                 <Link
                   href="/register"
                   className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500"
@@ -149,6 +163,7 @@ export default function Navbar() {
             >
               Browse Events
             </Link>
+
             <Link
               href="/calendar"
               onClick={() => setMenuOpen(false)}
@@ -156,6 +171,16 @@ export default function Navbar() {
             >
               Calendar
             </Link>
+
+            {/* NEW: My Events */}
+            <Link
+              href="/my-events"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm font-medium text-gray-300 hover:text-white"
+            >
+              My Events
+            </Link>
+
             {user ? (
               <>
                 <Link
@@ -165,6 +190,7 @@ export default function Navbar() {
                 >
                   Dashboard
                 </Link>
+
                 <button
                   onClick={handleLogout}
                   className="text-left text-sm font-medium text-gray-300 hover:text-white"
@@ -181,6 +207,7 @@ export default function Navbar() {
                 >
                   Sign in
                 </Link>
+
                 <Link
                   href="/register"
                   onClick={() => setMenuOpen(false)}
