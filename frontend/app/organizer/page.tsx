@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getOrganizerEvents, getOrganizerReports, deactivateEvent, createEvent } from '@/lib/api';
+import { getOrganizerEvents, getOrganizerReports, deactivateEvent, createEvent, getVenues } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import StatCard from '@/components/StatCard';
-import type { Event, OrganizerReport } from '@/lib/types';
+import type { Event, OrganizerReport, Venue } from '@/lib/types';
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00');
+  const d = new Date(dateStr.split('T')[0] + 'T00:00:00');
   return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
@@ -21,6 +21,7 @@ export default function OrganizerPage() {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [reports, setReports] = useState<OrganizerReport[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<OrgTab>('events');
   const [deactivating, setDeactivating] = useState<number | null>(null);
@@ -29,11 +30,13 @@ export default function OrganizerPage() {
   const [newEvent, setNewEvent] = useState({
     name: '',
     date: '',
-    venue: '',
+    venueId: '',
     description: '',
-    price: '',
     category: 'Music',
   });
+  const [ticketTypes, setTicketTypes] = useState<{ tier: string; price: string }[]>([
+    { tier: 'General', price: '' },
+  ]);
   const [createSuccess, setCreateSuccess] = useState(false);
   const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
@@ -46,9 +49,11 @@ export default function OrganizerPage() {
     Promise.all([
       getOrganizerEvents(token ?? ''),
       getOrganizerReports(token ?? ''),
-    ]).then(([evts, rpts]) => {
+      getVenues(token ?? ''),
+    ]).then(([evts, rpts, vns]) => {
       setEvents(evts);
       setReports(rpts);
+      setVenues(vns);
     }).finally(() => setLoading(false));
   }, [user, token, router]);
 
@@ -68,6 +73,18 @@ export default function OrganizerPage() {
   const totalSold = reports.reduce((s, r) => s + r.tickets_sold, 0);
   const activeCount = events.filter((e) => e.is_active).length;
 
+  function updateTicketType(i: number, field: 'tier' | 'price', value: string) {
+    setTicketTypes((prev) => prev.map((tt, idx) => (idx === i ? { ...tt, [field]: value } : tt)));
+  }
+
+  function addTicketType() {
+    setTicketTypes((prev) => [...prev, { tier: '', price: '' }]);
+  }
+
+  function removeTicketType(i: number) {
+    setTicketTypes((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
   async function handleCreateSubmit(e: React.FormEvent) {
     e.preventDefault();
     setCreateError('');
@@ -78,13 +95,17 @@ export default function OrganizerPage() {
         event_date: newEvent.date,
         category: newEvent.category,
         description: newEvent.description,
-        venue_name: newEvent.venue,
-        price: parseFloat(newEvent.price) || 0,
-      } as any);
+        venue: newEvent.venueId,
+        ticket_types: ticketTypes.map((tt) => ({
+          tier: tt.tier,
+          price: parseFloat(tt.price) || 0,
+        })),
+      });
       setEvents((prev) => [created, ...prev]);
       setCreateSuccess(true);
       setTimeout(() => setCreateSuccess(false), 3000);
-      setNewEvent({ name: '', date: '', venue: '', description: '', price: '', category: 'Music' });
+      setNewEvent({ name: '', date: '', venueId: '', description: '', category: 'Music' });
+      setTicketTypes([{ tier: 'General', price: '' }]);
       setTab('events');
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create event');
@@ -386,28 +407,65 @@ export default function OrganizerPage() {
 
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-300">Venue</label>
-                  <input
-                    type="text"
+                  <select
                     required
-                    value={newEvent.venue}
-                    onChange={(e) => setNewEvent({ ...newEvent, venue: e.target.value })}
-                    placeholder="e.g. Scotiabank Arena, Toronto"
-                    className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  />
+                    value={newEvent.venueId}
+                    onChange={(e) => setNewEvent({ ...newEvent, venueId: e.target.value })}
+                    className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">Select a venue…</option>
+                    {venues.map((v) => (
+                      <option key={v.venue_id} value={v.venue_id}>
+                        {v.venue_name} — {v.venue_address} (cap. {v.capacity.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-300">Base ticket price ($)</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={newEvent.price}
-                    onChange={(e) => setNewEvent({ ...newEvent, price: e.target.value })}
-                    placeholder="49.99"
-                    className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  />
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-300">Ticket types</label>
+                    <button
+                      type="button"
+                      onClick={addTicketType}
+                      className="text-xs font-medium text-indigo-400 hover:text-indigo-300"
+                    >
+                      + Add tier
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {ticketTypes.map((tt, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Tier name (e.g. VIP)"
+                          value={tt.tier}
+                          onChange={(e) => updateTicketType(i, 'tier', e.target.value)}
+                          className="flex-1 rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        />
+                        <input
+                          type="number"
+                          required
+                          min="0.01"
+                          step="0.01"
+                          placeholder="Price"
+                          value={tt.price}
+                          onChange={(e) => updateTicketType(i, 'price', e.target.value)}
+                          className="w-28 rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        />
+                        {ticketTypes.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeTicketType(i)}
+                            className="rounded-xl border border-gray-700 px-3 text-gray-500 hover:border-red-700 hover:text-red-400"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div>

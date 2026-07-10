@@ -4,6 +4,7 @@ import type {
   RegisterData,
   User,
   Event,
+  Venue,
   Booking,
   OrganizerReport,
 } from './types';
@@ -240,9 +241,21 @@ export async function getOrganizerReports(token: string): Promise<OrganizerRepor
   return request<OrganizerReport[]>('/api/organizer/reports/', undefined, token);
 }
 
+export async function getVenues(token: string): Promise<Venue[]> {
+  const res = await request<{ venues: Venue[] }>('/api/venues/', undefined, token);
+  return res.venues;
+}
+
 export async function createEvent(
   token: string,
-  data: Partial<Event> & { venue_name?: string; price?: number },
+  data: {
+    event_name: string;
+    event_date: string;
+    description?: string;
+    category?: string;
+    venue: string | number;
+    ticket_types: { tier: string; price: number }[];
+  },
 ): Promise<Event> {
   return request<Event>('/api/events/create/', { method: 'POST', body: JSON.stringify(data) }, token);
 }

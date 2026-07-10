@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { Booking } from '@/lib/types';
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00');
+  const d = new Date(dateStr.split('T')[0] + 'T00:00:00');
   return d.toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
