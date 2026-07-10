@@ -38,7 +38,7 @@ class AppearanceRequests(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = "appearance_requests"
 
     def __str__(self):
@@ -56,7 +56,7 @@ class Notifications(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = "notifications"
 
     def __str__(self):

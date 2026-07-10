@@ -16,7 +16,7 @@ function formatDate(dateStr: string) {
 type OrgTab = 'events' | 'reports' | 'create' | 'artists';
 
 export default function OrganizerPage() {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const [events, setEvents] = useState<Event[]>([]);
@@ -44,6 +44,7 @@ export default function OrganizerPage() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login');
       return;
@@ -59,7 +60,7 @@ export default function OrganizerPage() {
       setVenues(vns);
       setArtists(arts);
     }).finally(() => setLoading(false));
-  }, [user, token, router]);
+  }, [user, token, router, authLoading]);
 
   async function handleDeactivate(eventId: number) {
     setDeactivating(eventId);

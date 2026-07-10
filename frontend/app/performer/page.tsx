@@ -29,7 +29,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 export default function PerformerPage() {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const [events, setEvents] = useState<Event[]>([]);
@@ -37,6 +37,7 @@ export default function PerformerPage() {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login');
       return;
@@ -44,7 +45,7 @@ export default function PerformerPage() {
     getPerformerEvents(token ?? '')
       .then(setEvents)
       .finally(() => setLoading(false));
-  }, [user, token, router]);
+  }, [user, token, router, authLoading]);
 
   const filtered = events.filter((e) =>
     tab === 'upcoming' ? isUpcoming(e.event_date) : !isUpcoming(e.event_date),

@@ -51,14 +51,6 @@ export default function Navbar() {
               Calendar
             </Link>
 
-            {/* NEW: My Events */}
-            <Link
-              href="/my-events"
-              className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
-            >
-              My Events
-            </Link>
-
             {user?.role === 'organizer' && (
               <Link
                 href="/organizer"
@@ -74,6 +66,15 @@ export default function Navbar() {
                 className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
               >
                 My Performances
+              </Link>
+            )}
+
+            {user && user.role !== 'organizer' && user.role !== 'performer' && (
+              <Link
+                href="/my-events"
+                className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
+              >
+                My Events
               </Link>
             )}
           </nav>
@@ -172,14 +173,35 @@ export default function Navbar() {
               Calendar
             </Link>
 
-            {/* NEW: My Events */}
-            <Link
-              href="/my-events"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium text-gray-300 hover:text-white"
-            >
-              My Events
-            </Link>
+            {user?.role === 'organizer' && (
+              <Link
+                href="/organizer"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-medium text-gray-300 hover:text-white"
+              >
+                My Events
+              </Link>
+            )}
+
+            {user?.role === 'performer' && (
+              <Link
+                href="/performer"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-medium text-gray-300 hover:text-white"
+              >
+                My Performances
+              </Link>
+            )}
+
+            {user && user.role !== 'organizer' && user.role !== 'performer' && (
+              <Link
+                href="/my-events"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-medium text-gray-300 hover:text-white"
+              >
+                My Events
+              </Link>
+            )}
 
             {user ? (
               <>

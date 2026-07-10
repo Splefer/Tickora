@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authapp', '0002_payments'),
+        ('authapp', '0001_initial'),
     ]
 
     operations = [

@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('authapp', '0002_payments'),
+        ('authapp', '0001_initial'),
     ]
 
     operations = [

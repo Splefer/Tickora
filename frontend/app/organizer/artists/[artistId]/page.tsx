@@ -14,7 +14,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function ArtistInboxPage() {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const artistId = Number(params.artistId);
@@ -31,6 +31,7 @@ export default function ArtistInboxPage() {
   const [declineReason, setDeclineReason] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login');
       return;
@@ -43,7 +44,7 @@ export default function ArtistInboxPage() {
       setArtist(artists.find((a) => a.artist_id === artistId) ?? null);
       setRequests(reqs);
     }).finally(() => setLoading(false));
-  }, [user, token, router, artistId]);
+  }, [user, token, router, artistId, authLoading]);
 
   async function handleApprove(requestId: number) {
     setActingOn(requestId);

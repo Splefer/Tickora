@@ -20,8 +20,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login({ email, password });
-      router.push('/dashboard');
+      const res = await login({ email, password });
+      const role = res.user.role;
+      if (role === 'organizer') router.push('/organizer');
+      else if (role === 'performer') router.push('/performer');
+      else router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

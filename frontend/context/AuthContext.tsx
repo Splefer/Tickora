@@ -1,14 +1,14 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { User, LoginCredentials, RegisterData } from '@/lib/types';
+import type { User, LoginCredentials, RegisterData, AuthResponse } from '@/lib/types';
 import { login as apiLogin, register as apiRegister } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (creds: LoginCredentials) => Promise<void>;
+  login: (creds: LoginCredentials) => Promise<AuthResponse>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
 }
@@ -34,12 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  async function login(creds: LoginCredentials) {
+  async function login(creds: LoginCredentials): Promise<AuthResponse> {
     const res = await apiLogin(creds);
     setToken(res.token);
     setUser(res.user);
     localStorage.setItem('tickora_token', res.token);
     localStorage.setItem('tickora_user', JSON.stringify(res.user));
+    return res;
   }
 
   async function register(data: RegisterData) {

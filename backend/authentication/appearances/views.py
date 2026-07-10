@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
-from authapp.backend import get_loggedin_user
+from authapp.views import get_authenticated_user as get_loggedin_user
 from authapp.models import EventPerformers, PerformerLinks, Users
 
 from .models import AppearanceRequests

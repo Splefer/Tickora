@@ -14,7 +14,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from authapp.backend import get_loggedin_user
+from authapp.views import get_authenticated_user as get_loggedin_user
 from authapp.models import TicketTypes, UpcomingEvents, Venues
 
 

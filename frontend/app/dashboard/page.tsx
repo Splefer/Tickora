@@ -17,7 +17,7 @@ function isUpcoming(dateStr: string) {
 }
 
 export default function DashboardPage() {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [cancelling, setCancelling] = useState<number | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login');
       return;
@@ -33,7 +34,7 @@ export default function DashboardPage() {
     getMyBookings(token ?? '')
       .then(setBookings)
       .finally(() => setLoading(false));
-  }, [user, token, router]);
+  }, [user, token, router, authLoading]);
 
   async function handleCancel(bookingId: number) {
     setCancelling(bookingId);

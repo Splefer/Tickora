@@ -16,7 +16,7 @@ interface SelectedTicket {
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
 
   const sessionId = searchParams.get('session_id');
   const eventId = Number(searchParams.get('event_id'));
@@ -29,8 +29,9 @@ function CheckoutContent() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) router.push('/login');
-  }, [user, router]);
+  }, [user, router, authLoading]);
 
   // Came back from Stripe — verify and show confirmation
   useEffect(() => {
