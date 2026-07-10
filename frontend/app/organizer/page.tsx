@@ -3,17 +3,17 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getOrganizerEvents, getOrganizerReports, deactivateEvent, createEvent, getVenues } from '@/lib/api';
+import { getOrganizerEvents, getOrganizerReports, deactivateEvent, createEvent, getVenues, getManagedArtists } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import StatCard from '@/components/StatCard';
-import type { Event, OrganizerReport, Venue } from '@/lib/types';
+import type { Event, OrganizerReport, Venue, ManagedArtist } from '@/lib/types';
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr.split('T')[0] + 'T00:00:00');
   return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-type OrgTab = 'events' | 'reports' | 'create';
+type OrgTab = 'events' | 'reports' | 'create' | 'artists';
 
 export default function OrganizerPage() {
   const { user, token } = useAuth();
@@ -25,6 +25,8 @@ export default function OrganizerPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<OrgTab>('events');
   const [deactivating, setDeactivating] = useState<number | null>(null);
+  const [artists, setArtists] = useState<ManagedArtist[]>([]);
+
 
   // Create event form state
   const [newEvent, setNewEvent] = useState({
@@ -50,10 +52,12 @@ export default function OrganizerPage() {
       getOrganizerEvents(token ?? ''),
       getOrganizerReports(token ?? ''),
       getVenues(token ?? ''),
-    ]).then(([evts, rpts, vns]) => {
+      getManagedArtists(token ?? ''),
+    ]).then(([evts, rpts, vns, arts]) => {
       setEvents(evts);
       setReports(rpts);
       setVenues(vns);
+      setArtists(arts);
     }).finally(() => setLoading(false));
   }, [user, token, router]);
 
@@ -174,6 +178,7 @@ export default function OrganizerPage() {
           { key: 'events', label: '📋 My Events' },
           { key: 'reports', label: '📊 Reports' },
           { key: 'create', label: '➕ Create Event' },
+          { key: 'artists', label: '🎤 Artists' }, // NEW
         ] as { key: OrgTab; label: string }[]).map((t) => (
           <button
             key={t.key}
@@ -490,7 +495,76 @@ export default function OrganizerPage() {
             </div>
           </div>
         )}
+        
+        {/* Artists tab */}
+        {tab === 'artists' && (
+          <div>
+            {loading ? (
+              // Same skeleton pattern used by the Events tab while data loads
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-20 animate-pulse rounded-2xl bg-gray-800" />
+                ))}
+              </div>
+            ) : artists.length === 0 ? (
+              // Empty state, matching the style used elsewhere (e.g. dashboard bookings)
+              <div className="py-16 text-center">
+                <div className="text-5xl">🎤</div>
+                <h3 className="mt-4 text-lg font-semibold text-white">No artists under management</h3>
+                <p className="mt-2 text-sm text-gray-400">
+                  Artists you manage will appear here once added.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-gray-800">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-800 bg-gray-900">
+                      <th className="px-6 py-4 text-left font-medium text-gray-400">Artist</th>
+                      <th className="px-6 py-4 text-left font-medium text-gray-400">Genre</th>
+                      <th className="px-6 py-4 text-left font-medium text-gray-400">Upcoming</th>
+                      <th className="px-6 py-4 text-left font-medium text-gray-400">Pending requests</th>
+                      <th className="px-6 py-4 text-left font-medium text-gray-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800 bg-gray-900/50">
+                    {artists.map((artist) => (
+                      <tr key={artist.artist_id} className="hover:bg-gray-800/40">
+                        <td className="px-6 py-4">
+                          <span className="font-medium text-white">{artist.artist_name}</span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-400">{artist.genre ?? '—'}</td>
+                        <td className="px-6 py-4 text-gray-400">{artist.upcoming_appearance_count}</td>
+                        <td className="px-6 py-4">
+                          {/* Badge only shows color/emphasis when there's something to act on */}
+                          {artist.pending_request_count > 0 ? (
+                            <span className="rounded-full bg-yellow-900/40 px-2.5 py-1 text-xs font-medium text-yellow-400">
+                              {artist.pending_request_count} pending
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-500">
+                              Up to date
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Link
+                            href={`/organizer/artists/${artist.artist_id}`}
+                            className="text-xs font-medium text-indigo-400 hover:text-indigo-300"
+                          >
+                            View inbox →
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
+
   );
 }

@@ -7,6 +7,8 @@ import type {
   Venue,
   Booking,
   OrganizerReport,
+  ManagedArtist,
+  AppearanceRequest,
 } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -270,6 +272,42 @@ export async function updateEvent(
 
 export async function deactivateEvent(token: string, id: number): Promise<void> {
   return request<void>(`/api/events/${id}/deactivate/`, { method: 'POST' }, token);
+}
+
+// Fetches every artist managed by the currently logged-in organizer.
+export async function getManagedArtists(_token: string): Promise<ManagedArtist[]> {
+  const res = await fetch(`${API_URL}/api/organizer/artists`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+// Fetches all appearance requests sent in for a specific artist.
+export async function getArtistRequests(
+  _token: string,
+  artistId: number,
+): Promise<AppearanceRequest[]> {
+  const res = await fetch(`${API_URL}/api/organizer/artists/${artistId}/requests`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+// Approves, declines, or requests changes on a single appearance request.
+export async function respondToAppearanceRequest(
+  _token: string,
+  requestId: number,
+  status: 'approved' | 'declined' | 'changes_requested',
+  reason?: string,
+): Promise<AppearanceRequest> {
+  const res = await fetch(`${API_URL}/api/organizer/requests/${requestId}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, reason }),
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
 }
 
 // ── Performer ─────────────────────────────────────────────────────────────────

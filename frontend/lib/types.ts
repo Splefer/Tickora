@@ -81,3 +81,31 @@ export interface OrganizerReport {
   revenue: number;
   event_date: string;
 }
+
+export interface ManagedArtist {
+  artist_id: number;
+  artist_name: string;
+  genre?: string;
+  avatar_url?: string;
+  pending_request_count: number;
+  upcoming_appearance_count: number;
+}
+
+// A single appearance request sent by another organizer/promoter
+// for one of the artists this organizer manages.
+export interface AppearanceRequest {
+  request_id: number;
+  artist_id: number;
+  event_id: number;
+  event_name: string;
+  event_date: string; // 'YYYY-MM-DD'
+  venue: {
+    venue_name: string;
+    venue_address: string;
+  };
+  requested_by: string;   // name of the organizer/promoter sending the request
+  fee_offer?: number;
+  notes?: string;
+  status: 'pending' | 'approved' | 'declined' | 'changes_requested';
+  decline_reason?: string;
+}
