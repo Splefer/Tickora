@@ -184,3 +184,32 @@ class Payments(models.Model):
     class Meta:
         db_table = 'payments'
         managed = False
+
+class PerformerLinkRequests(models.Model):
+    request_id = models.AutoField(primary_key=True)
+    performer = models.ForeignKey(
+        Users,
+        models.DO_NOTHING,
+        db_column='performer_id',
+        related_name='manager_requests_sent'
+    )
+    manager = models.ForeignKey(
+        Users,
+        models.DO_NOTHING,
+        db_column='manager_id',
+        related_name='manager_requests_received'
+    )
+    status = models.CharField(
+        max_length=20,
+        default='pending'
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        db_table = 'performer_link_requests'
+        managed = False
+        unique_together = (('performer', 'manager'),)
