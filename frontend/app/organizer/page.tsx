@@ -205,8 +205,8 @@ export default function OrganizerPage() {
                 ))}
               </div>
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-gray-800">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-2xl border border-gray-800">
+                <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b border-gray-800 bg-gray-900">
                       <th className="px-6 py-4 text-left font-medium text-gray-400">Event</th>
@@ -285,8 +285,8 @@ export default function OrganizerPage() {
         {/* Reports tab */}
         {tab === 'reports' && (
           <div className="space-y-6">
-            <div className="overflow-hidden rounded-2xl border border-gray-800">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-2xl border border-gray-800">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-gray-800 bg-gray-900">
                     <th className="px-6 py-4 text-left font-medium text-gray-400">Event</th>

@@ -90,7 +90,8 @@ export default function Navbar() {
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold uppercase">
                     {(user.forename?.[0] ?? user.email?.[0] ?? '?').toUpperCase()}
                   </span>
-                  {user.forename ?? user.email ?? 'User'}
+                  <span className="max-w-[120px] truncate">{user.forename ?? user.email ?? 'User'}
+                  </span>
                   <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -136,7 +137,7 @@ export default function Navbar() {
 
           {/* Mobile hamburger */}
           <button
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white md:hidden"
+            className="rounded-lg p-2.5 text-gray-400 hover:bg-gray-800 hover:text-white md:hidden"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Toggle menu"
           >

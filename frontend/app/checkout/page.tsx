@@ -142,7 +142,7 @@ function CheckoutContent() {
               {loading ? 'Redirecting to Stripe…' : `Pay $${total.toFixed(2)} with Stripe`}
             </button>
 
-            <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500">
               <span>🔒 SSL encrypted</span>
               <span>·</span>
               <span>💳 Powered by Stripe</span>
