@@ -52,40 +52,61 @@ export default function PerformerPage() {
   );
 
   const upcomingCount = events.filter((e) => isUpcoming(e.event_date)).length;
-  const totalAudience = events.reduce((s, e) => s + (e.tickets_sold ?? 0), 0);
-  const avgFill = events.length
-    ? Math.round(
-        events.reduce((s, e) => s + ((e.tickets_sold ?? 0) / e.venue.capacity) * 100, 0) /
-          events.length,
-      )
-    : 0;
+    const totalEvents = events.length;
+
+    const futureSignups = events
+      .filter((e) => isUpcoming(e.event_date))
+      .reduce((sum, e) => sum + (e.tickets_sold ?? 0), 0);
+
+    const pastAttendance = events
+      .filter((e) => !isUpcoming(e.event_date))
+      .reduce((sum, e) => sum + (e.tickets_sold ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Header */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
-          Performer Portal
+          Performance Summary
         </p>
+
         <h1 className="mt-1 text-2xl font-bold text-white">
           {user?.forename} {user?.surname}
         </h1>
-        <p className="mt-1 text-sm text-gray-400">{user?.email}</p>
+
+        <p className="mt-1 text-sm text-gray-400">
+          Track your upcoming performances, attendance, and event engagement.
+        </p>
+
+        <p className="mt-1 text-sm text-gray-500">
+          {user?.email}
+        </p>
       </div>
 
       {/* Stats */}
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
+          <div className="text-3xl font-bold text-white">{totalEvents}</div>
+          <div className="mt-1 text-sm text-gray-400">Total Events</div>
+        </div>
+
         <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
           <div className="text-3xl font-bold text-white">{upcomingCount}</div>
-          <div className="mt-1 text-sm text-gray-400">Upcoming performances</div>
+          <div className="mt-1 text-sm text-gray-400">Upcoming Events</div>
         </div>
+
         <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
-          <div className="text-3xl font-bold text-white">{totalAudience.toLocaleString()}</div>
-          <div className="mt-1 text-sm text-gray-400">Total audience (all events)</div>
+          <div className="text-3xl font-bold text-white">
+            {futureSignups.toLocaleString()}
+          </div>
+          <div className="mt-1 text-sm text-gray-400">Future Signups</div>
         </div>
+
         <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
-          <div className="text-3xl font-bold text-white">{avgFill}%</div>
-          <div className="mt-1 text-sm text-gray-400">Average venue fill rate</div>
+          <div className="text-3xl font-bold text-white">
+            {pastAttendance.toLocaleString()}
+          </div>
+          <div className="mt-1 text-sm text-gray-400">Past Attendance</div>
         </div>
       </div>
 
@@ -155,13 +176,17 @@ export default function PerformerPage() {
                   {/* Attendance info */}
                   <div className="shrink-0 rounded-xl border border-gray-800 bg-gray-800/50 p-4 sm:text-right">
                     <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Attendance
+                      {tab === 'upcoming'
+                        ? 'Current Signups'
+                        : 'Final Attendance'}
                     </div>
                     <div className="mt-1 text-2xl font-bold text-white">
                       {event.tickets_sold?.toLocaleString() ?? '—'}
                     </div>
                     <div className="text-xs text-gray-400">
-                      of {event.venue.capacity.toLocaleString()} capacity
+                      {tab === 'upcoming'
+                        ? `${event.venue.capacity.toLocaleString()} seats available`
+                        : `${event.venue.capacity.toLocaleString()} venue capacity`}
                     </div>
                     <div className="mt-2 h-1.5 w-full rounded-full bg-gray-700">
                       <div
@@ -169,7 +194,11 @@ export default function PerformerPage() {
                         style={{ width: `${soldPct}%` }}
                       />
                     </div>
-                    <div className="mt-1 text-xs text-gray-500">{soldPct}% sold</div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {tab === 'upcoming'
+                          ? `${soldPct}% reserved`
+                          : `${soldPct}% attendance`}
+                      </div>
                   </div>
                 </div>
 
