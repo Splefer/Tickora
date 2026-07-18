@@ -13,7 +13,7 @@ export default function MyEventsPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-6 py-10">
+    <main className="min-h-screen bg-[#0a0a0f] px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <h1 className="text-4xl font-bold text-white">
           My Events
