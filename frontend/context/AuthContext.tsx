@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (creds: LoginCredentials) => Promise<AuthResponse>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -58,8 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('tickora_user');
   }
 
+  function updateUser(updated: User) {
+    setUser(updated);
+    localStorage.setItem('tickora_user', JSON.stringify(updated));
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
