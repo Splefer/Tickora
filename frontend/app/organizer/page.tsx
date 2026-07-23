@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getOrganizerEvents, getOrganizerReports, deactivateEvent, createEvent, getVenues, getManagedArtists } from '@/lib/api';
+import { getOrganizerEvents, getOrganizerReports, deactivateEvent, createEvent, getVenues, getManagedArtists, searchArtists, sendAppearanceRequest } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import StatCard from '@/components/StatCard';
-import type { Event, OrganizerReport, Venue, ManagedArtist } from '@/lib/types';
+import type { Event, OrganizerReport, Venue, ManagedArtist, ArtistSearchResult } from '@/lib/types';
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr.split('T')[0] + 'T00:00:00');
@@ -14,6 +14,12 @@ function formatDate(dateStr: string) {
 }
 
 type OrgTab = 'events' | 'reports' | 'create' | 'artists';
+
+interface PendingInvite {
+  artist: ArtistSearchResult;
+  fee_offer: string;
+  notes: string;
+}
 
 export default function OrganizerPage() {
   const { user, token, loading: authLoading } = useAuth();
@@ -43,6 +49,12 @@ export default function OrganizerPage() {
   const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const [artistQuery, setArtistQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ArtistSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [sendingInvites, setSendingInvites] = useState(false);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -61,6 +73,21 @@ export default function OrganizerPage() {
       setArtists(arts);
     }).finally(() => setLoading(false));
   }, [user, token, router, authLoading]);
+
+  useEffect(() => {
+    if (!artistQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    const timeout = setTimeout(() => {
+      searchArtists(token ?? '', artistQuery)
+        .then(setSearchResults)
+        .finally(() => setSearching(false));
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [artistQuery, token]);
 
   async function handleDeactivate(eventId: number) {
     setDeactivating(eventId);
@@ -90,6 +117,25 @@ export default function OrganizerPage() {
     setTicketTypes((prev) => prev.filter((_, idx) => idx !== i));
   }
 
+  function addInvite(artist: ArtistSearchResult) {
+    if (pendingInvites.some((inv) => inv.artist.artist_id === artist.artist_id)) return;
+    setPendingInvites((prev) => [...prev, { artist, fee_offer: '', notes: '' }]);
+    setArtistQuery('');
+    setSearchResults([]);
+  }
+
+  function removeInvite(artistId: number) {
+    setPendingInvites((prev) => prev.filter((inv) => inv.artist.artist_id !== artistId));
+  }
+
+  function updateInviteField(artistId: number, field: 'fee_offer' | 'notes', value: string) {
+    setPendingInvites((prev) =>
+      prev.map((inv) =>
+        inv.artist.artist_id === artistId ? { ...inv, [field]: value } : inv,
+      ),
+    );
+  }
+
   async function handleCreateSubmit(e: React.FormEvent) {
     e.preventDefault();
     setCreateError('');
@@ -107,10 +153,30 @@ export default function OrganizerPage() {
         })),
       });
       setEvents((prev) => [created, ...prev]);
+
+      if (pendingInvites.length > 0) {
+        setSendingInvites(true);
+        try {
+          await Promise.all(
+            pendingInvites.map((inv) =>
+              sendAppearanceRequest(token ?? '', {
+                event_id: created.event_id,
+                artist_id: inv.artist.artist_id,
+                fee_offer: inv.fee_offer ? Number(inv.fee_offer) : undefined,
+                notes: inv.notes || undefined,
+              }),
+            ),
+          );
+        } finally {
+          setSendingInvites(false);
+        }
+      }
+
       setCreateSuccess(true);
       setTimeout(() => setCreateSuccess(false), 3000);
       setNewEvent({ name: '', date: '', venueId: '', description: '', category: 'Music' });
       setTicketTypes([{ tier: 'General', price: '' }]);
+      setPendingInvites([]);
       setTab('events');
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create event');
@@ -184,9 +250,8 @@ export default function OrganizerPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`rounded-lg px-5 py-2 text-sm font-medium transition-colors ${
-              tab === t.key ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
-            }`}
+            className={`rounded-lg px-5 py-2 text-sm font-medium transition-colors ${tab === t.key ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
+              }`}
           >
             {t.label}
           </button>
@@ -244,11 +309,10 @@ export default function OrganizerPage() {
                           </td>
                           <td className="px-6 py-4">
                             <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                                event.is_active
+                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${event.is_active
                                   ? 'bg-green-900/40 text-green-400'
                                   : 'bg-gray-800 text-gray-500'
-                              }`}
+                                }`}
                             >
                               {event.is_active ? 'Active' : 'Inactive'}
                             </span>
@@ -485,18 +549,101 @@ export default function OrganizerPage() {
                   />
                 </div>
 
+                {/* Invite artists section */}
+                <div className="border-t border-gray-800 pt-5">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-300">
+                    Invite artists to perform
+                  </label>
+                  <p className="mb-3 text-xs text-gray-500">
+                    Search for artists and send them an appearance request for this event.
+                  </p>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={artistQuery}
+                      onChange={(e) => setArtistQuery(e.target.value)}
+                      placeholder="Search artists by name…"
+                      className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    />
+
+                    {artistQuery && (
+                      <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-gray-700 bg-gray-800 shadow-lg">
+                        {searching ? (
+                          <div className="px-4 py-3 text-sm text-gray-400">Searching…</div>
+                        ) : searchResults.length === 0 ? (
+                          <div className="px-4 py-3 text-sm text-gray-500">No artists found</div>
+                        ) : (
+                          searchResults.map((artist) => (
+                            <button
+                              key={artist.artist_id}
+                              type="button"
+                              onClick={() => addInvite(artist)}
+                              className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-white hover:bg-gray-700"
+                            >
+                              <span>{artist.artist_name}</span>
+                              {artist.genre && <span className="text-xs text-gray-400">{artist.genre}</span>}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {pendingInvites.length > 0 && (
+                    <div className="mt-4 space-y-3">
+                      {pendingInvites.map((inv) => (
+                        <div
+                          key={inv.artist.artist_id}
+                          className="rounded-xl border border-gray-700 bg-gray-800/50 p-4"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-white">{inv.artist.artist_name}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeInvite(inv.artist.artist_id)}
+                              className="text-xs text-red-400 hover:text-red-300"
+                            >
+                              Remove
+                            </button>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={inv.fee_offer}
+                              onChange={(e) => updateInviteField(inv.artist.artist_id, 'fee_offer', e.target.value)}
+                              placeholder="Fee offer ($)"
+                              className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-white placeholder-gray-500 outline-none focus:border-indigo-500"
+                            />
+                            <input
+                              type="text"
+                              value={inv.notes}
+                              onChange={(e) => updateInviteField(inv.artist.artist_id, 'notes', e.target.value)}
+                              placeholder="Note (optional)"
+                              className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-white placeholder-gray-500 outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   type="submit"
-                  disabled={creating}
+                  disabled={creating || sendingInvites}
                   className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {creating ? 'Publishing…' : 'Publish event'}
+                  {creating ? 'Publishing…' : sendingInvites ? 'Sending invites…' : 'Publish event'}
                 </button>
               </form>
             </div>
           </div>
         )}
-        
+
         {/* Artists tab */}
         {tab === 'artists' && (
           <div>

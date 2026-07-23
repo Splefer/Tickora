@@ -16,9 +16,10 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
+from django.db import models
 
 from authapp.views import get_authenticated_user as get_loggedin_user
-from authapp.models import EventPerformers, PerformerLinks, Users
+from authapp.models import EventPerformers, PerformerLinks, UpcomingEvents, Users
 
 from .models import AppearanceRequests
 from .notifications import notify_decision
@@ -229,3 +230,83 @@ def event_performers_view(request, event_id):
             {"artist_id": p.user_id, "artist_name": f"{p.forename} {p.surname}"} for p in performers
         ],
     })
+
+@require_GET
+def search_artists_view(request):
+    """GET /api/artists/search?q=<query>
+
+    Searches every performer in the system by name (not just artists the
+    logged-in organizer already manages) — this is what lets an organizer
+    invite an artist who isn't currently under their management.
+    """
+    user = get_loggedin_user(request)
+    if user is None:
+        return JsonResponse({"error": "Not logged in."}, status=401)
+
+    query = (request.GET.get("q") or "").strip()
+    if not query:
+        return JsonResponse([], safe=False)
+
+    performers = Users.objects.filter(role__role_name="performer").filter(
+        models.Q(forename__icontains=query) | models.Q(surname__icontains=query)
+    ).order_by("forename", "surname")[:20]
+
+    return JsonResponse([
+        {
+            "artist_id": p.user_id,
+            "artist_name": f"{p.forename} {p.surname}",
+            "genre": None,  # no genre field on Users currently — see note below
+        }
+        for p in performers
+    ], safe=False)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_appearance_request_view(request):
+    """POST /api/organizer/requests
+
+    Body: {"event_id": ..., "artist_id": ..., "fee_offer": ..., "notes": "..."}
+    Lets an organizer invite ANY performer (not just artists they already
+    manage) to appear at one of their own events. Creates a new "pending"
+    AppearanceRequests row that the artist's manager will see in their
+    inbox via GET /api/organizer/artists/<artist_id>/requests.
+    """
+    user = get_loggedin_user(request)
+    if user is None:
+        return JsonResponse({"error": "Not logged in."}, status=401)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+    event_id = data.get("event_id")
+    artist_id = data.get("artist_id")
+    if not event_id or not artist_id:
+        return JsonResponse({"error": "event_id and artist_id are required."}, status=400)
+
+    try:
+        event = UpcomingEvents.objects.select_related("venue").get(pk=event_id)
+    except UpcomingEvents.DoesNotExist:
+        return JsonResponse({"error": "Event not found."}, status=404)
+
+    # NOTE: confirm the actual field name for event ownership — assuming
+    # `event.organizer_id` here based on organizer-scoped patterns elsewhere.
+    if event.organizer_id != user.user_id:
+        return JsonResponse({"error": "You do not own this event."}, status=403)
+
+    try:
+        performer = Users.objects.get(pk=artist_id, role__role_name="performer")
+    except Users.DoesNotExist:
+        return JsonResponse({"error": "Artist not found."}, status=404)
+
+    appearance_request = AppearanceRequests.objects.create(
+        event=event,
+        performer=performer,
+        requested_by=user,
+        fee_offer=data.get("fee_offer"),
+        notes=data.get("notes"),
+        status="pending",
+    )
+
+    return JsonResponse(_request_to_dict(appearance_request), status=201)

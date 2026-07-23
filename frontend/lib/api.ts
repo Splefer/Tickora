@@ -9,6 +9,7 @@ import type {
   OrganizerReport,
   ManagedArtist,
   AppearanceRequest,
+  ArtistSearchResult,
 } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -305,6 +306,40 @@ export async function respondToAppearanceRequest(
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status, reason }),
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+// Searches every performer in the system by name — not just artists the
+// logged-in organizer already manages — so they can be invited to an event.
+export async function searchArtists(
+  _token: string,
+  query: string,
+): Promise<ArtistSearchResult[]> {
+  const res = await fetch(`${API_URL}/api/artists/search?q=${encodeURIComponent(query)}`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+// Invites an artist (any performer, not just a managed one) to appear at
+// one of the logged-in organizer's own events.
+export async function sendAppearanceRequest(
+  _token: string,
+  data: {
+    event_id: number;
+    artist_id: number;
+    fee_offer?: number;
+    notes?: string;
+  },
+): Promise<AppearanceRequest> {
+  const res = await fetch(`${API_URL}/api/organizer/requests`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
