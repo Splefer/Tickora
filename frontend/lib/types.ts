@@ -109,3 +109,9 @@ export interface AppearanceRequest {
   status: 'pending' | 'approved' | 'declined' | 'changes_requested';
   decline_reason?: string;
 }
+
+export interface ArtistSearchResult {
+  artist_id: number;
+  artist_name: string;
+  genre?: string;
+}

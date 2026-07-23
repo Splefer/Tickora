@@ -43,7 +43,7 @@ export default function ScheduleCalendar({ bookings }: ScheduleCalendarProps) {
 
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="relative w-full max-w-xl rounded-2xl border border-indigo-500/30 bg-gray-900 p-6 shadow-2xl">
+          <div className="relative max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-indigo-500/30 bg-gray-900 p-6 shadow-2xl">
             <button
               onClick={() => setSelectedBooking(null)}
               className="absolute right-4 top-4 text-gray-400 hover:text-white"

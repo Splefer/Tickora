@@ -16,13 +16,13 @@ export default function CalendarPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-6 py-10">
+    <main className="min-h-screen bg-[#0a0a0f] px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <h1 className="mb-2 text-4xl font-bold text-white">Event Calendar</h1>
         <p className="mb-8 text-gray-400">Browse all upcoming Tickora events by date.</p>
 
         {loading ? (
-          <div className="h-[600px] animate-pulse rounded-2xl bg-gray-800" />
+          <div className="h-[400px] animate-pulse rounded-2xl bg-gray-800 sm:h-[600px]" />
         ) : (
           <EventCalendar events={events} />
         )}
