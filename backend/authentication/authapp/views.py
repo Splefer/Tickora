@@ -111,6 +111,14 @@ def _ser_manager_request(request):
         }
     }
 
+def _ser_performer(performer):
+    return {
+        'user_id': performer.user_id,
+        'forename': performer.forename,
+        'surname': performer.surname,
+        'email': performer.email,
+    }
+
 # ── Auth views ─────────────────────────────────────────────────────────────────
 
 @csrf_exempt
@@ -163,6 +171,76 @@ def logout_view(request):
     return JsonResponse({'message': 'Logged out'})
 
 @csrf_exempt
+def update_email_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    user = get_authenticated_user(request)
+    if user is None:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    body = json.loads(request.body)
+    ok, result = auth_backend.update_email(user, body.get('password'),body.get('email'))
+    if not ok:
+        return JsonResponse({'errors': [result]},status=400)
+
+    return JsonResponse({'message': result, 'user': _ser_user(user)})
+
+@csrf_exempt
+def change_password_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    user = get_authenticated_user(request)
+    if user is None:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    body = json.loads(request.body)
+    ok, result = auth_backend.change_password(user, body.get('current_password'), body.get('new_password'))
+    if not ok:
+        return JsonResponse({'errors': [result]}, status=400)
+
+    return JsonResponse({'message': result})
+
+@csrf_exempt
+def update_forename_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    user = get_authenticated_user(request)
+    if user is None:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    body = json.loads(request.body)
+    ok, result = auth_backend.update_forename(user, body.get('forename'))
+    if not ok:
+        return JsonResponse({'errors': [result]},status=400)
+
+    return JsonResponse({'message': 'First name updated.','user': _ser_user(result)})
+
+@csrf_exempt
+def update_surname_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    user = get_authenticated_user(request)
+    if user is None:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    body = json.loads(request.body)
+    ok, result = auth_backend.update_surname(user, body.get('surname'))
+    if not ok:
+        return JsonResponse({'errors': [result]}, status=400)
+
+    return JsonResponse({'message': 'Last name updated.', 'user': _ser_user(result) })
+
+@csrf_exempt
+def update_address_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    user = get_authenticated_user(request)
+    if user is None:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    body = json.loads(request.body)
+    ok, result = auth_backend.update_address(user, body.get('address'))
+    if not ok:
+        return JsonResponse({'errors': [result]},status=400)
+
+    return JsonResponse({'message': 'Address updated.', 'user': _ser_user(result)})
+
+@csrf_exempt
 def request_manager_link_view(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -172,31 +250,15 @@ def request_manager_link_view(request):
     body = json.loads(request.body)
     manager_id = body.get('manager_id')
     if manager_id is None:
-        return JsonResponse(
-            {'errors': ['manager_id is required']},
-            status=400
-        )
+        return JsonResponse({'errors': ['manager_id is required']}, status=400)
     try:
-        manager = Users.objects.select_related('role').get(
-            user_id=manager_id
-        )
+        manager = Users.objects.select_related('role').get(user_id=manager_id)
     except Users.DoesNotExist:
-        return JsonResponse(
-            {'errors': ['Manager not found']},
-            status=404
-        )
-    ok, result = auth_backend.request_manager_link(
-        performer,
-        manager
-    )
+        return JsonResponse({'errors': ['Manager not found']}, status=404)
+    ok, result = auth_backend.request_manager_link(performer, manager)
     if not ok:
-        return JsonResponse(
-            {'errors': [result]},
-            status=400
-        )
-    return JsonResponse({
-        'message': 'Request submitted.'
-    }, status=201)
+        return JsonResponse({'errors': [result]}, status=400)
+    return JsonResponse({'message': 'Request submitted.' }, status=201)
 
 @csrf_exempt
 def pending_manager_requests_view(request):
@@ -204,17 +266,9 @@ def pending_manager_requests_view(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     manager = get_authenticated_user(request)
     if manager is None:
-        return JsonResponse(
-            {'error': 'Authentication required'},
-            status=401
-        )
+        return JsonResponse( {'error': 'Authentication required'}, status=401)
     requests = auth_backend.get_pending_manager_requests(manager)
-    return JsonResponse({
-        'requests': [
-            _ser_manager_request(r)
-            for r in requests
-        ]
-    })
+    return JsonResponse({'requests': [ _ser_manager_request(r) for r in requests]})
 
 @csrf_exempt
 def approve_manager_request_view(request, request_id):
@@ -222,22 +276,11 @@ def approve_manager_request_view(request, request_id):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     manager = get_authenticated_user(request)
     if manager is None:
-        return JsonResponse(
-            {'error': 'Authentication required'},
-            status=401
-        )
-    ok, result = auth_backend.approve_manager_request(
-        manager,
-        request_id
-    )
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    ok, result = auth_backend.approve_manager_request(manager, request_id)
     if not ok:
-        return JsonResponse(
-            {'errors': [result]},
-            status=400
-        )
-    return JsonResponse({
-        'message': result
-    })
+        return JsonResponse({'errors': [result]}, status=400)
+    return JsonResponse({'message': result})
 
 @csrf_exempt
 def deny_manager_request_view(request, request_id):
@@ -245,22 +288,11 @@ def deny_manager_request_view(request, request_id):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     manager = get_authenticated_user(request)
     if manager is None:
-        return JsonResponse(
-            {'error': 'Authentication required'},
-            status=401
-        )
-    ok, result = auth_backend.deny_manager_request(
-        manager,
-        request_id
-    )
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    ok, result = auth_backend.deny_manager_request(manager, request_id)
     if not ok:
-        return JsonResponse(
-            {'errors': [result]},
-            status=400
-        )
-    return JsonResponse({
-        'message': result
-    })
+        return JsonResponse({'errors': [result]}, status=400)
+    return JsonResponse({'message': result})
 
 @csrf_exempt
 def performer_manager_view(request):
@@ -268,15 +300,10 @@ def performer_manager_view(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     performer = get_authenticated_user(request)
     if performer is None:
-        return JsonResponse(
-            {'error': 'Authentication required'},
-            status=401
-        )
+        return JsonResponse({'error': 'Authentication required'}, status=401)
     manager = auth_backend.get_manager(performer)
     if manager is None:
-        return JsonResponse({
-            'manager': None
-        })
+        return JsonResponse({'manager': None})
     return JsonResponse({
         'manager': {
             'user_id': manager.user_id,
@@ -285,6 +312,17 @@ def performer_manager_view(request):
             'email': manager.email
         }
     })
+
+@csrf_exempt
+def linked_performers_view(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    manager = get_authenticated_user(request)
+    if manager is None:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    performers = auth_backend.get_linked_performers(manager)
+
+    return JsonResponse({'performers': [_ser_performer(p) for p in performers]})
 
 # ── Events views ───────────────────────────────────────────────────────────────
 

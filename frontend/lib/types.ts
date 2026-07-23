@@ -1,4 +1,4 @@
-export type Role = 'customer' | 'organizer' | 'performer' | 'admin';
+export type Role = 'customer' | 'organizer' | 'performer' | 'manager' | 'admin';
 
 export interface Venue {
   venue_id: string;

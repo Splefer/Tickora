@@ -58,6 +58,7 @@ function normalizeUser(rawUser: any): User {
     verified: rawUser.verified ?? false,
     created_at: rawUser.created_at ?? new Date().toISOString(),
     role: rawUser.role ?? 'customer',
+    address: rawUser.address,
   };
 }
 
@@ -349,6 +350,149 @@ export async function sendAppearanceRequest(
 
 export async function getPerformerEvents(token: string): Promise<Event[]> {
   return request<Event[]>('/api/performer/events/', undefined, token);
+}
+
+// ── Account / Profile ─────────────────────────────────────────────────────────
+
+export async function updateEmail(
+  token: string,
+  password: string,
+  email: string,
+): Promise<{ message: string; user: User }> {
+  return request<{ message: string; user: User }>(
+    '/api/account/email/',
+    { method: 'POST', body: JSON.stringify({ password, email }) },
+    token,
+  );
+}
+
+export async function changePassword(
+  token: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    '/api/account/password/',
+    { method: 'POST', body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }) },
+    token,
+  );
+}
+
+export async function updateForename(
+  token: string,
+  forename: string,
+): Promise<{ message: string; user: User }> {
+  return request<{ message: string; user: User }>(
+    '/api/account/forename/',
+    { method: 'POST', body: JSON.stringify({ forename }) },
+    token,
+  );
+}
+
+export async function updateSurname(
+  token: string,
+  surname: string,
+): Promise<{ message: string; user: User }> {
+  return request<{ message: string; user: User }>(
+    '/api/account/surname/',
+    { method: 'POST', body: JSON.stringify({ surname }) },
+    token,
+  );
+}
+
+export async function updateAddress(
+  token: string,
+  address: string,
+): Promise<{ message: string; user: User }> {
+  return request<{ message: string; user: User }>(
+    '/api/account/address/',
+    { method: 'POST', body: JSON.stringify({ address }) },
+    token,
+  );
+}
+
+// ── Manager Link Requests ─────────────────────────────────────────────────────
+
+export interface ManagerRequestInfo {
+  request_id: number;
+  status: string;
+  requested_at: string;
+  performer: {
+    user_id: number;
+    forename: string;
+    surname: string;
+    email: string;
+  };
+}
+
+export interface LinkedManager {
+  user_id: number;
+  forename: string;
+  surname: string;
+  email: string;
+}
+
+export async function requestManagerLink(
+  token: string,
+  managerId: number,
+): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    '/api/manager/request-link/',
+    { method: 'POST', body: JSON.stringify({ manager_id: managerId }) },
+    token,
+  );
+}
+
+export async function getPendingManagerRequests(
+  token: string,
+): Promise<{ requests: ManagerRequestInfo[] }> {
+  return request<{ requests: ManagerRequestInfo[] }>(
+    '/api/manager/pending-requests/',
+    undefined,
+    token,
+  );
+}
+
+export async function approveManagerRequest(
+  token: string,
+  requestId: number,
+): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    `/api/manager/approve/${requestId}/`,
+    { method: 'POST' },
+    token,
+  );
+}
+
+export async function denyManagerRequest(
+  token: string,
+  requestId: number,
+): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    `/api/manager/deny/${requestId}/`,
+    { method: 'POST' },
+    token,
+  );
+}
+
+export async function getPerformerManager(
+  token: string,
+): Promise<{ manager: LinkedManager | null }> {
+  return request<{ manager: LinkedManager | null }>(
+    '/api/performer/manager/',
+    undefined,
+    token,
+  );
+}
+
+export async function getLinkedPerformers(
+  token: string,
+): Promise<{ performers: { user_id: number; forename: string; surname: string; email: string }[] }> {
+  return request<{ performers: { user_id: number; forename: string; surname: string; email: string }[] }>(
+    '/api/manager/performers/',
+    undefined,
+    token,
+  );
 }
 
 // ── Payments ──────────────────────────────────────────────────────────────────

@@ -107,6 +107,14 @@ export default function Navbar() {
                       Dashboard
                     </Link>
 
+                    <Link
+                      href="/profile"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
+                    >
+                      Account Settings
+                    </Link>
+
                     <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -212,6 +220,14 @@ export default function Navbar() {
                   className="text-sm font-medium text-gray-300 hover:text-white"
                 >
                   Dashboard
+                </Link>
+
+                <Link
+                  href="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className="text-sm font-medium text-gray-300 hover:text-white"
+                >
+                  Account Settings
                 </Link>
 
                 <button

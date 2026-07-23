@@ -1,14 +1,15 @@
-"""
--------------------------------------------------------
-registration and authentication
--------------------------------------------------------
-"""
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import send_mail
 from django.utils import timezone
 from .models import Users, Roles, PerformerLinks, PerformerLinkRequests
-import random
+import random, re
+
+"""
+#################
+registration and authentication
+#################
+"""
 
 
 def email_exists(email):
@@ -171,6 +172,164 @@ def test_send_email():
 
     print("Email sent successfully.")
 
+"""
+#################
+Updating Account Profile 
+#################
+"""
+
+"""
+    -------------------------------------------------------
+    Changes email when requested by the user
+    after validating the user using their password.
+    Use: success, message = update_email(user, password, email)
+    -------------------------------------------------------
+    Parameters:
+        user - user object
+        password - str
+        email - str
+    Returns:
+        success - bool
+        message - str
+    ------------------------------------------------------
+"""
+def update_email(user, password, email):
+    if not check_password(password, user.password_hash):
+        return False, "Incorrect password."
+    if email_exists(email):
+        return False, "Email is already registered."
+    user.email = email
+    user.save()
+    return True, "Email updated."
+
+"""
+    -------------------------------------------------------
+    Changes password when requested by the user
+    after validating the user using their previous password.
+    Password must be of length >= 8.
+    Use: change_password(user, curr_password, new_password)
+    -------------------------------------------------------
+    Parameters:
+        user - user object
+        password - str
+        email - str
+    Returns:
+        success - bool
+        message - str
+    ------------------------------------------------------
+"""
+def change_password(user, curr_password, new_password):
+    if not check_password(curr_password, user.password_hash):
+        return False, "Incorrect password."
+    
+    if check_password(new_password, user.password_hash):
+        return False, "Enter a new password."
+    
+    if len(new_password)<8:
+        return False, "Password must have at least 8 characters."
+    
+    user.password_hash = pass_hash(new_password)
+    user.save()
+
+    return True, "Password updated."
+
+"""
+    -------------------------------------------------------
+    Updates user's first name after verifying no errors exist.
+    Use: status = invalid_name(name)
+    -------------------------------------------------------
+    Parameters:
+        name - str (not None)
+    Returns:
+        status -  True if invalid
+                    False otherwise
+    ------------------------------------------------------
+"""
+def invalid_name(name):
+    return re.match(r"^[a-zA-Z\s'-]+$",name) is None
+
+"""
+    -------------------------------------------------------
+    Updates user's first name after verifying no errors exist.
+    Use: done, message = update_forename(user, data)
+    -------------------------------------------------------
+    Parameters:
+        user - user object
+        data - entered forename
+    Returns:
+        done -  True if update is done successfully
+                    False otherwise
+        message - user object if True
+                error if False 
+    ------------------------------------------------------
+"""
+def update_forename(user, data):
+    if data is None or data.strip()=="":
+        return False, "First name is required."
+    elif invalid_name(data):
+        return False, "First name is invalid."
+    else:
+        user.forename = data.strip()
+
+    user.save()
+    return True, user
+
+"""
+    -------------------------------------------------------
+    Updates user's last name after verifying no errors exist.
+    Use: done, message = update_surname(user, data)
+    -------------------------------------------------------
+    Parameters:
+        user - user object
+        data - entered surname
+    Returns:
+        done -  True if update is done successfully
+                    False otherwise
+        message - user object if True
+                error if False 
+    ------------------------------------------------------
+"""
+def update_surname(user, data):
+    if data is None or data.strip()=="":
+        return False, "Last name is required."
+    elif invalid_name(data):
+        return False, "Last name is invalid."
+    else:
+        user.surname = data.strip()
+
+    user.save()
+    return True, user
+
+"""
+    -------------------------------------------------------
+    Updates user's address after verifying no errors exist.
+    Use: done, message = update_address(user, data)
+    -------------------------------------------------------
+    Parameters:
+        user - user object
+        data - entered address
+    Returns:
+        done -  True if update is done successfully
+                    False otherwise
+        message - user object if True
+                error if False 
+    ------------------------------------------------------
+"""
+def update_address(user, data):
+    if data is None or data.strip()=="":
+        return False, "Address is required."
+    else:
+        user.address = data.strip()
+
+    user.save()
+    return True, user
+
+
+"""
+#################
+Link Performers to Managers
+#################
+"""
 def is_manager(user):
     return user.role.role_name == "manager"
 
@@ -306,3 +465,19 @@ def deny_manager_request(manager, request_id):
     request.save()
 
     return True, "Denied"
+
+"""
+    -------------------------------------------------------
+    Returns every performer who is linked to a manager
+    Use: performers = get_linked_performers(manager)
+    Parameters:
+        manager - user object
+    Returns:
+        performers - list of user objects
+    ------------------------------------------------------
+"""
+def get_linked_performers(manager):
+    if not is_manager(manager):
+        return []
+    links = PerformerLinks.objects.select_related("performer").filter(manager=manager)
+    return [link.performer for link in links]
