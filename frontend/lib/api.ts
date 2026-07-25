@@ -246,8 +246,7 @@ export async function getOrganizerReports(token: string): Promise<OrganizerRepor
 }
 
 export async function getVenues(token: string): Promise<Venue[]> {
-  const res = await request<{ venues: Venue[] }>('/api/venues/', undefined, token);
-  return res.venues;
+  return request<Venue[]>('/api/venues/', undefined, token);
 }
 
 export async function createEvent(
