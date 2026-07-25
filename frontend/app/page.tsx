@@ -1,65 +1,174 @@
-import Image from "next/image";
+import Link from 'next/link';
+import EventCard from '@/components/EventCard';
+import { mockEvents } from '@/lib/mock-data';
 
-export default function Home() {
+const CATEGORIES = [
+  { name: 'Music', icon: '🎵', href: '/events?category=Music' },
+  { name: 'Sports', icon: '🏀', href: '/events?category=Sports' },
+  { name: 'Arts', icon: '🎭', href: '/events?category=Arts' },
+  { name: 'Comedy', icon: '😄', href: '/events?category=Comedy' },
+];
+
+const WHY_TICKORA = [
+  {
+    icon: '💸',
+    title: 'Transparent Pricing',
+    desc: 'No hidden fees. The price you see is the price you pay. Always.',
+  },
+  {
+    icon: '⚡',
+    title: 'Real-Time Inventory',
+    desc: 'Live seat availability so you always know exactly how many tickets remain.',
+  },
+  {
+    icon: '🔒',
+    title: 'Secure Checkout',
+    desc: 'Payment handled by trusted third-party processors. Your card data never touches our servers.',
+  },
+];
+
+export default function HomePage() {
+  const featured = mockEvents.slice(0, 3);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div>
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-[#0a0a0f] px-4 pb-24 pt-20 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 h-[600px] w-[900px] rounded-full bg-indigo-900/20 blur-3xl" />
+        </div>
+
+        <div className="mx-auto max-w-4xl text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-900/20 px-4 py-1.5 text-sm font-medium text-indigo-300">
+            🎟 Canada's fairest ticketing platform
+          </span>
+
+          <h1 className="mt-6 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-7xl">
+            Experience live events{' '}
+            <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              like never before
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-400">
+            Fair prices. Real-time inventory. Zero hidden fees. Discover concerts, sports, arts,
+            comedy — and book in seconds.
           </p>
+
+          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <Link
+              href="/events"
+              className="w-full rounded-full bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-900/50 transition-all hover:bg-indigo-500 hover:shadow-indigo-700/50 sm:w-auto"
+            >
+              Browse events →
+            </Link>
+            <Link
+              href="/register"
+              className="w-full rounded-full border border-gray-700 px-8 py-3.5 text-base font-semibold text-gray-300 transition-colors hover:border-gray-500 hover:text-white sm:w-auto"
+            >
+              Create account
+            </Link>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-14 flex flex-wrap justify-center gap-8">
+            {[
+              { value: '50K+', label: 'Events annually' },
+              { value: '$0', label: 'Hidden fees' },
+              { value: '100%', label: 'Secure checkout' },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <div className="text-3xl font-extrabold text-white">{s.value}</div>
+                <div className="mt-1 text-sm text-gray-500">{s.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* Categories */}
+      <section className="border-t border-gray-800/50 bg-[#0d0d16] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {CATEGORIES.map((cat) => (
+              <Link
+                key={cat.name}
+                href={cat.href}
+                className="group flex flex-col items-center gap-3 rounded-2xl border border-gray-800 bg-gray-900/50 py-8 transition-all hover:border-indigo-500/50 hover:bg-gray-900"
+              >
+                <span className="text-3xl transition-transform group-hover:scale-110">{cat.icon}</span>
+                <span className="text-sm font-medium text-gray-300 group-hover:text-white">
+                  {cat.name}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* Featured events */}
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                On sale now
+              </p>
+              <h2 className="mt-1 text-2xl font-bold text-white">Featured Events</h2>
+            </div>
+            <Link href="/events" className="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+              View all →
+            </Link>
+          </div>
+
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((event) => (
+              <EventCard key={event.event_id} event={event} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Tickora */}
+      <section className="border-t border-gray-800/50 bg-[#0d0d16] px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+              Our promise
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-white">Why choose Tickora?</h2>
+          </div>
+
+          <div className="mt-10 grid gap-8 sm:grid-cols-3">
+            {WHY_TICKORA.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-2xl border border-gray-800 bg-gray-900/40 p-8 text-center"
+              >
+                <div className="text-4xl">{item.icon}</div>
+                <h3 className="mt-4 text-base font-semibold text-white">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-400">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-900/30 via-purple-900/20 to-pink-900/10 px-8 py-16 text-center">
+          <h2 className="text-3xl font-bold text-white">Ready to find your next event?</h2>
+          <p className="mt-4 text-gray-400">
+            Join thousands of Canadians who book smarter with Tickora.
+          </p>
+          <Link
+            href="/events"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg transition-all hover:bg-indigo-500"
+          >
+            Explore all events →
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
