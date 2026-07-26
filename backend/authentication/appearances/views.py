@@ -32,6 +32,21 @@ def _manager_of(performer_id, manager):
     return PerformerLinks.objects.filter(performer_id=performer_id, manager=manager).exists()
 
 
+def _can_decide(appearance_request, user):
+    """True iff `user` may approve/decline/request-changes on this request.
+
+    Normally only the performer's manager decides. A performer with no
+    manager on record has nobody who could ever act on their behalf, so
+    they're allowed to decide on their own requests instead.
+    """
+    if _manager_of(appearance_request.performer_id, user):
+        return True
+    is_unmanaged = not PerformerLinks.objects.filter(
+        performer_id=appearance_request.performer_id
+    ).exists()
+    return is_unmanaged and user.user_id == appearance_request.performer_id
+
+
 def _artist_to_dict(performer):
     pending_count = AppearanceRequests.objects.filter(performer=performer, status="pending").count()
     upcoming_count = AppearanceRequests.objects.filter(
@@ -104,9 +119,11 @@ def respond_request_view(request, request_id):
     """PATCH /api/organizer/requests/<request_id>
 
     Body: {"status": "approved" | "declined" | "changes_requested", "reason": "..."}
-    Only the artist's manager may decide, and only while the request is
-    still pending. On approval, the performer is added to the event's
-    EventPerformers so the event/schedule reflect the decision.
+    Normally only the artist's manager may decide. If the artist has no
+    manager on record, the artist may decide on their own behalf instead.
+    Only while the request is still pending. On approval, the performer is
+    added to the event's EventPerformers so the event/schedule reflect the
+    decision.
     """
     user = get_loggedin_user(request)
     if user is None:
@@ -119,7 +136,7 @@ def respond_request_view(request, request_id):
     except AppearanceRequests.DoesNotExist:
         return JsonResponse({"error": "Appearance request not found."}, status=404)
 
-    if not _manager_of(appearance_request.performer_id, user):
+    if not _can_decide(appearance_request, user):
         return JsonResponse({"error": "You do not manage this artist."}, status=403)
 
     if appearance_request.status != "pending":

@@ -276,13 +276,13 @@ export async function deactivateEvent(token: string, id: number): Promise<void> 
 }
 
 // Fetches every artist managed by the currently logged-in organizer.
-export async function getManagedArtists(_token: string): Promise<ManagedArtist[]> {
-  return request<ManagedArtist[]>(`/api/organizer/artists', undefined, token);
+export async function getManagedArtists(token: string): Promise<ManagedArtist[]> {
+  return request<ManagedArtist[]>(`/api/organizer/artists`, undefined, token);
 }
 
 // Fetches all appearance requests sent in for a specific artist.
 export async function getArtistRequests(
-  _token: string,
+  token: string,
   artistId: number,
 ): Promise<AppearanceRequest[]> {
   return request<AppearanceRequest[]>(`/api/organizer/artists/${artistId}/requests`, undefined, token);
@@ -290,7 +290,7 @@ export async function getArtistRequests(
 
 // Approves, declines, or requests changes on a single appearance request.
 export async function respondToAppearanceRequest(
-  _token: string,
+  token: string,
   requestId: number,
   status: 'approved' | 'declined' | 'changes_requested',
   reason?: string,
@@ -301,7 +301,7 @@ export async function respondToAppearanceRequest(
 // Searches every performer in the system by name — not just artists the
 // logged-in organizer already manages — so they can be invited to an event.
 export async function searchArtists(
-  _token: string,
+  token: string,
   query: string,
 ): Promise<ArtistSearchResult[]> {
   return request<ArtistSearchResult[]>(`/api/artists/search?q=${encodeURIComponent(query)}`, undefined, token);
@@ -310,7 +310,7 @@ export async function searchArtists(
 // Invites an artist (any performer, not just a managed one) to appear at
 // one of the logged-in organizer's own events.
 export async function sendAppearanceRequest(
-  _token: string,
+  token: string,
   data: {
     event_id: number;
     artist_id: number;
@@ -329,6 +329,12 @@ export async function sendAppearanceRequest(
 
 export async function getPerformerEvents(token: string): Promise<Event[]> {
   return request<Event[]>('/api/performer/events/', undefined, token);
+}
+
+// All of the logged-in performer's own appearance requests, any status —
+// used to surface pending ones they can decide on themselves when unmanaged.
+export async function getPerformerAppearances(token: string): Promise<AppearanceRequest[]> {
+  return request<AppearanceRequest[]>('/api/performer/appearances', undefined, token);
 }
 
 // ── Account / Profile ─────────────────────────────────────────────────────────

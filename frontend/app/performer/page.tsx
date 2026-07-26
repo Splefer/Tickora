@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getPerformerEvents } from '@/lib/api';
+import { getPerformerEvents, getPerformerAppearances, getPerformerManager, respondToAppearanceRequest } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import type { Event } from '@/lib/types';
+import type { Event, AppearanceRequest } from '@/lib/types';
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr.split('T')[0] + 'T00:00:00');
@@ -18,7 +18,7 @@ function formatDate(dateStr: string) {
 }
 
 function isUpcoming(dateStr: string) {
-  return new Date(dateStr + 'T00:00:00') >= new Date();
+  return new Date(dateStr.split('T')[0] + 'T00:00:00') >= new Date();
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -36,6 +36,10 @@ export default function PerformerPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
 
+  const [pendingRequests, setPendingRequests] = useState<AppearanceRequest[]>([]);
+  const [isUnmanaged, setIsUnmanaged] = useState(false);
+  const [decidingId, setDecidingId] = useState<number | null>(null);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -45,7 +49,22 @@ export default function PerformerPage() {
     getPerformerEvents(token ?? '')
       .then(setEvents)
       .finally(() => setLoading(false));
+
+    getPerformerManager(token ?? '').then((res) => setIsUnmanaged(res.manager === null));
+    getPerformerAppearances(token ?? '')
+      .then((reqs) => setPendingRequests(reqs.filter((r) => r.status === 'pending')))
+      .catch(() => setPendingRequests([]));
   }, [user, token, router, authLoading]);
+
+  async function handleDecide(requestId: number, status: 'approved' | 'declined') {
+    setDecidingId(requestId);
+    try {
+      await respondToAppearanceRequest(token ?? '', requestId, status);
+      setPendingRequests((prev) => prev.filter((r) => r.request_id !== requestId));
+    } finally {
+      setDecidingId(null);
+    }
+  }
 
   const filtered = events.filter((e) =>
     tab === 'upcoming' ? isUpcoming(e.event_date) : !isUpcoming(e.event_date),
@@ -109,6 +128,54 @@ export default function PerformerPage() {
           <div className="mt-1 text-sm text-gray-400">Past Attendance</div>
         </div>
       </div>
+
+      {/* Pending appearance requests — only actionable here when the
+          performer has no manager to decide on their behalf */}
+      {isUnmanaged && pendingRequests.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-white">Pending Requests</h2>
+          <p className="mt-1 text-sm text-gray-400">
+            You don't have a manager on file, so you can approve or decline these yourself.
+          </p>
+          <div className="mt-4 space-y-3">
+            {pendingRequests.map((r) => (
+              <div
+                key={r.request_id}
+                className="rounded-2xl border border-gray-800 bg-gray-900 p-5 sm:flex sm:items-center sm:justify-between"
+              >
+                <div>
+                  <h3 className="text-base font-semibold text-white">{r.event_name}</h3>
+                  <p className="mt-0.5 text-sm text-gray-400">{formatDate(r.event_date)}</p>
+                  <p className="mt-0.5 text-sm text-gray-500">
+                    {r.venue.venue_name} · {r.venue.venue_address}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Requested by {r.requested_by}
+                    {r.fee_offer != null && ` · Fee offer $${r.fee_offer.toLocaleString()}`}
+                  </p>
+                  {r.notes && <p className="mt-1 text-xs text-gray-500">"{r.notes}"</p>}
+                </div>
+                <div className="mt-4 flex gap-2 sm:mt-0">
+                  <button
+                    onClick={() => handleDecide(r.request_id, 'declined')}
+                    disabled={decidingId === r.request_id}
+                    className="rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:border-red-700 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    onClick={() => handleDecide(r.request_id, 'approved')}
+                    disabled={decidingId === r.request_id}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Approve
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mt-10 flex gap-1 rounded-xl border border-gray-800 bg-gray-900 p-1 w-fit">

@@ -13,7 +13,7 @@ function formatDate(dateStr: string) {
 }
 
 function isUpcoming(dateStr: string) {
-  return new Date(dateStr + 'T00:00:00') >= new Date();
+  return new Date(dateStr.split('T')[0] + 'T00:00:00') >= new Date();
 }
 
 export default function DashboardPage() {
