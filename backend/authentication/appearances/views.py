@@ -164,7 +164,14 @@ def respond_request_view(request, request_id):
             event=appearance_request.event, performer=appearance_request.performer
         )
 
-    notify_decision(appearance_request)
+    try:
+        notify_decision(appearance_request)
+    except Exception:
+        # Notifications are a best-effort convenience layered on top of the
+        # decision itself, which is already saved above (and, on approval,
+        # already reflected in EventPerformers). Nothing about notifying
+        # people of the decision may ever fail the decision request.
+        pass
 
     return JsonResponse(_request_to_dict(appearance_request))
 
