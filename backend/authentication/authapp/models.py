@@ -95,7 +95,7 @@ class PerformerLinks(models.Model):
 
 
 class EventPerformers(models.Model):
-    id = models.AutoField(primary_key=True) # surrogate key for Django only
+    pk = models.CompositePrimaryKey('event_id', 'performer_id', editable=False)
     event = models.ForeignKey(
         UpcomingEvents,
         models.DO_NOTHING,
@@ -106,12 +106,10 @@ class EventPerformers(models.Model):
         models.DO_NOTHING,
         db_column='performer_id'
     )
-    status = models.CharField(max_length=20, default='requested')
 
     class Meta:
         db_table = 'event_performers'
         managed = False
-        unique_together = (('event', 'performer'),)
 
 class Bookings(models.Model):
     booking_id = models.AutoField(primary_key=True)
