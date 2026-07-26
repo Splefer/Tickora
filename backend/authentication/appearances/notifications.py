@@ -22,13 +22,21 @@ STATUS_LABELS = {
 def _notify(user, message, appearance_request):
     Notifications.objects.create(user=user, appearance_request=appearance_request, message=message)
     if user.email:
-        send_mail(
-            "Tickora: appearance request update",
-            message,
-            settings.EMAIL_HOST_USER,
-            [user.email],
-            fail_silently=True,
-        )
+        try:
+            send_mail(
+                "Tickora: appearance request update",
+                message,
+                getattr(settings, "EMAIL_HOST_USER", None),
+                [user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            # Email is a best-effort convenience on top of the in-app
+            # Notifications row above, which has already been saved. A
+            # misconfigured/unreachable mail setup must never fail the
+            # decision request itself — fail_silently=True only covers
+            # errors during the actual send, not e.g. missing settings.
+            pass
 
 
 def notify_decision(appearance_request):
