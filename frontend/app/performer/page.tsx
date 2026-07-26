@@ -61,6 +61,9 @@ export default function PerformerPage() {
     try {
       await respondToAppearanceRequest(token ?? '', requestId, status);
       setPendingRequests((prev) => prev.filter((r) => r.request_id !== requestId));
+      if (status === 'approved') {
+        getPerformerEvents(token ?? '').then(setEvents);
+      }
     } finally {
       setDecidingId(null);
     }
