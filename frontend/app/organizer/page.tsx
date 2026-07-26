@@ -56,23 +56,18 @@ export default function OrganizerPage() {
   const [sendingInvites, setSendingInvites] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    Promise.all([
-      getOrganizerEvents(token ?? ''),
-      getOrganizerReports(token ?? ''),
-      getVenues(token ?? ''),
-      getManagedArtists(token ?? ''),
-    ]).then(([evts, rpts, vns, arts]) => {
-      setEvents(evts);
-      setReports(rpts);
-      setVenues(vns);
-      setArtists(arts);
-    }).finally(() => setLoading(false));
-  }, [user, token, router, authLoading]);
+	if (authLoading) return;
+	if (!user) {
+		router.push('/login');
+		return;
+  }
+
+  getOrganizerEvents(token ?? '').then(setEvents).catch(() => setEvents([]));
+  getOrganizerReports(token ?? '').then(setReports).catch(() => setReports([]));
+  getVenues(token ?? '').then(setVenues).catch(() => setVenues([]));
+  getManagedArtists(token ?? '').then(setArtists).catch(() => setArtists([]));
+  setLoading(false);
+}, [user, token, router, authLoading]);
 
   useEffect(() => {
     if (!artistQuery.trim()) {

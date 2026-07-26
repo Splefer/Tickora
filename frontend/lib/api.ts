@@ -246,8 +246,7 @@ export async function getOrganizerReports(token: string): Promise<OrganizerRepor
 }
 
 export async function getVenues(token: string): Promise<Venue[]> {
-  const res = await request<{ venues: Venue[] }>('/api/venues/', undefined, token);
-  return res.venues;
+  return request<Venue[]>('/api/venues/', undefined, token);
 }
 
 export async function createEvent(
@@ -278,9 +277,7 @@ export async function deactivateEvent(token: string, id: number): Promise<void> 
 
 // Fetches every artist managed by the currently logged-in organizer.
 export async function getManagedArtists(_token: string): Promise<ManagedArtist[]> {
-  const res = await fetch(`${API_URL}/api/organizer/artists`, { credentials: 'include' });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  return request<ManagedArtist[]>(`/api/organizer/artists', undefined, token);
 }
 
 // Fetches all appearance requests sent in for a specific artist.
@@ -288,11 +285,7 @@ export async function getArtistRequests(
   _token: string,
   artistId: number,
 ): Promise<AppearanceRequest[]> {
-  const res = await fetch(`${API_URL}/api/organizer/artists/${artistId}/requests`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  return request<AppearanceRequest[]>(`/api/organizer/artists/${artistId}/requests`, undefined, token);
 }
 
 // Approves, declines, or requests changes on a single appearance request.
@@ -302,14 +295,7 @@ export async function respondToAppearanceRequest(
   status: 'approved' | 'declined' | 'changes_requested',
   reason?: string,
 ): Promise<AppearanceRequest> {
-  const res = await fetch(`${API_URL}/api/organizer/requests/${requestId}`, {
-    method: 'PATCH',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, reason }),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  return request<AppearanceRequest>(`/api/organizer/requests/${requestId}`, {method: 'PATCH', body: JSON.stringify({status, reason})}, token);
 }
 
 // Searches every performer in the system by name — not just artists the
@@ -318,11 +304,7 @@ export async function searchArtists(
   _token: string,
   query: string,
 ): Promise<ArtistSearchResult[]> {
-  const res = await fetch(`${API_URL}/api/artists/search?q=${encodeURIComponent(query)}`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  return request<ArtistSearchResult[]>(`/api/artists/search?q=${encodeURIComponent(query)}`, undefined, token);
 }
 
 // Invites an artist (any performer, not just a managed one) to appear at
@@ -336,14 +318,11 @@ export async function sendAppearanceRequest(
     notes?: string;
   },
 ): Promise<AppearanceRequest> {
-  const res = await fetch(`${API_URL}/api/organizer/requests`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  return request<AppearanceRequest>(
+	'/api/organizer/requests',
+	{method: 'POST', body: JSON.stringify(data)},
+	token,
+  );
 }
 
 // ── Performer ─────────────────────────────────────────────────────────────────
