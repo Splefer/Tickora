@@ -23,7 +23,10 @@ async function request<T>(path: string, options?: RequestInit, token?: string): 
       ...(options?.headers ?? {}),
     },
   });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(getApiErrorMessage(data, `API error: ${res.status}`));
+  }
   return res.json() as Promise<T>;
 }
 
